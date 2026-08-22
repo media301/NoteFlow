@@ -938,41 +938,58 @@ function initFirebase() {
     clearInterval(poll);
     const { db, ref, onValue, set, myId, myColor } = window._fb;
 
-    // Show who's online
+    // Presence heartbeat
     const presenceRef = ref(db, 'presence/' + myId);
-    set(presenceRef, { color: myColor, ts: Date.now() });
+    const pingPresence = () => set(presenceRef, { color: myColor, ts: Date.now() });
+    pingPresence();
+    setInterval(pingPresence, 15000);
 
-    // Listen for shared note changes
-    const noteRef = ref(db, 'shared/note');
-    let remoteUpdate = false;
-    onValue(noteRef, (snap) => {
-      const data = snap.val();
-      if (!data || data.author === myId) return;
-      remoteUpdate = true;
-      const titleEl = document.getElementById('docTitle');
-      const bodyEl  = document.getElementById('docBody');
-      if (titleEl.textContent !== (data.title || '')) titleEl.textContent = data.title || '';
-      if (bodyEl.innerHTML   !== (data.body  || '')) bodyEl.innerHTML   = data.body  || '';
-      remoteUpdate = false;
+    // Track whether user is actively typing
+    let typing = false, typingTimer = null;
+    const titleEl = document.getElementById('docTitle');
+    const bodyEl  = document.getElementById('docBody');
+    [titleEl, bodyEl].forEach(el => {
+      el.addEventListener('focus', () => { typing = true; });
+      el.addEventListener('blur',  () => { typing = false; });
     });
 
-    // Push local changes
+    // Push to Firebase on every keystroke (300ms debounce)
+    let pushTimer = null;
     window._pushToFirebase = () => {
-      const title = document.getElementById('docTitle').textContent.trim();
-      const body  = document.getElementById('docBody').innerHTML;
-      set(ref(db, 'shared/note'), { title, body, author: myId, ts: Date.now() });
+      if (pushTimer) clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        set(ref(db, 'shared/note'), {
+          title:  titleEl.textContent.trim(),
+          body:   bodyEl.innerHTML,
+          author: myId,
+          ts:     Date.now()
+        });
+      }, 300);
     };
 
-    // Online count
-    const presAllRef = ref(db, 'presence');
-    onValue(presAllRef, (snap) => {
-      const users = snap.val() || {};
-      const recent = Object.values(users).filter(u => Date.now() - u.ts < 30000);
-      const count = recent.length;
-      const pill = document.getElementById('onlinePill');
-      if (pill) pill.textContent = count + ' online';
+    // Listen for remote changes — update editor when someone else types
+    onValue(ref(db, 'shared/note'), (snap) => {
+      const data = snap.val();
+      if (!data || data.author === myId) return; // ignore our own echoes
+      // Only update if user isn't mid-keystroke
+      if (!typing) {
+        if (titleEl.textContent !== (data.title || '')) titleEl.textContent = data.title || '';
+        if (bodyEl.innerHTML    !== (data.body  || '')) bodyEl.innerHTML    = data.body  || '';
+      }
     });
-    setInterval(() => set(presenceRef, { color: myColor, ts: Date.now() }), 15000);
+
+    // Hook input events to push immediately
+    [titleEl, bodyEl].forEach(el => {
+      el.addEventListener('input', () => window._pushToFirebase());
+    });
+
+    // Online count pill
+    onValue(ref(db, 'presence'), (snap) => {
+      const users  = snap.val() || {};
+      const recent = Object.values(users).filter(u => Date.now() - u.ts < 30000);
+      const pill   = document.getElementById('onlinePill');
+      if (pill) pill.textContent = recent.length + ' online';
+    });
   }, 200);
 }
 </script>
