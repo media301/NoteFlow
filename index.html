@@ -204,6 +204,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .pin-badge{font-size:10px;color:var(--amber);}
 .entry-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s;flex-wrap:wrap;}
 .note-entry:hover .entry-actions{opacity:1;}
+@media(max-width:600px){.entry-actions{opacity:1;}}
 .entry-act-btn{display:flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;
                border:1px solid var(--brd2);background:none;color:var(--dim2);
                font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;
@@ -438,6 +439,7 @@ input[type=file]{display:none;}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
     </button>
     <button class="hdr-btn team-btn" onclick="openSheet()">👥 <span id="teamCount">0</span></button>
+    <button class="icon-btn team-btn" onclick="showNewTopic()" title="New topic" style="font-size:18px;font-weight:700">+</button>
     <button class="hdr-btn primary" onclick="showShare()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       <span class="btn-text">Invite</span>
@@ -633,9 +635,21 @@ input[type=file]{display:none;}
   <div style="margin-top:1rem">
     <div class="sheet-sec-title">
       Topics
-      <button class="add-btn" onclick="closeSheet();setTimeout(showNewTopic,150)">+</button>
+      <button class="add-btn" onclick="closeSheet();setTimeout(showNewTopic,350)">+</button>
     </div>
     <div id="sheetTopics"></div>
+  </div>
+  <div style="margin-top:1rem" id="sheetDmSection">
+    <div class="sheet-sec-title">Direct Messages</div>
+    <div id="sheetDmList"></div>
+  </div>
+  <div style="margin-top:1rem">
+    <div class="sheet-sec-title">Views</div>
+    <div class="nav-row" onclick="closeSheet();setTimeout(switchToActionItems,350)">
+      <span class="row-icon">✅</span>
+      <span class="row-label">Action Items</span>
+      <span class="row-count" id="sheetActionCount"></span>
+    </div>
   </div>
   <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
     <button class="signout-btn" style="width:100%" onclick="signOut()">
@@ -856,8 +870,11 @@ function openDm(userId,name,initials,color){
   document.getElementById('actionToolbar').style.display='none';
   clearFeed();cancelReply();cancelActionTag();
   if(window._fb){
-    const{db,ref,onValue}=window._fb;
+    const{db,ref,onValue,set}=window._fb;
     const key=dmKey(myId,userId);
+    // Save member info so offline users still show correctly
+    set(ref(db,'dms/'+key+'/members/'+userId),{name,initials,color});
+    set(ref(db,'dms/'+key+'/members/'+myId),{name:myName,initials:myInitials,color:myColor});
     onValue(ref(db,'dms/'+key+'/entries'),snap=>{
       if(currentView!=='dm'||currentDmWith?.userId!==userId)return;
       renderFeed(snap.val()||{},true);
@@ -866,19 +883,28 @@ function openDm(userId,name,initials,color){
   renderTopicList();renderDmList(null);closeSheet();
 }
 function renderDmList(data){
-  if(!data){document.getElementById('dmSection').style.display='none';return;}
+  const dmSection=document.getElementById('dmSection');
+  const dmList=document.getElementById('dmList');
+  const sheetDmSection=document.getElementById('sheetDmSection');
+  const sheetDmList=document.getElementById('sheetDmList');
+  if(!data){if(dmSection)dmSection.style.display='none';if(sheetDmSection)sheetDmSection.style.display='none';return;}
   const myDms=Object.entries(data).filter(([k])=>k.includes(myId));
-  if(!myDms.length){document.getElementById('dmSection').style.display='none';return;}
-  document.getElementById('dmSection').style.display='block';
-  document.getElementById('dmList').innerHTML=myDms.map(([key])=>{
+  if(!myDms.length){if(dmSection)dmSection.style.display='none';if(sheetDmSection)sheetDmSection.style.display='none';return;}
+  if(dmSection)dmSection.style.display='block';
+  if(sheetDmSection)sheetDmSection.style.display='block';
+  const html=myDms.map(([key,dmData])=>{
     const otherId=key.replace(myId,'').replace(/^__|__$/,'');
-    const other=allUsers[otherId]||{name:'Unknown',initials:'?',color:'#888'};
+    // Use saved member info first, fall back to online presence
+    const saved=(dmData.members&&dmData.members[otherId])||null;
+    const other=allUsers[otherId]||saved||{name:'Unknown',initials:'?',color:'#888'};
     const isActive=currentView==='dm'&&currentDmWith?.userId===otherId;
     return `<div class="nav-row${isActive?' dm-active':''}" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}')">
-      <div class="row-badge" style="background:${other.color};width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:700;color:#000">${esc(other.initials)}</div>
+      <div style="background:${other.color};width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;flex-shrink:0">${esc(other.initials)}</div>
       <span class="row-label">${esc(other.name)}</span>
     </div>`;
   }).join('');
+  if(dmList)dmList.innerHTML=html;
+  if(sheetDmList)sheetDmList.innerHTML=html;
 }
 
 // ── ACTION ITEMS ─────────────────────────────────────
@@ -913,6 +939,7 @@ function updateActionCount(){
   let count=0;
   Object.values(allEntries).forEach(entries=>Object.values(entries).forEach(e=>{if(e.isAction)count++;}));
   document.getElementById('actionCount').textContent=count||'';
+  const sc=document.getElementById('sheetActionCount');if(sc)sc.textContent=count||'';
 }
 
 // ── PINNED ───────────────────────────────────────────
