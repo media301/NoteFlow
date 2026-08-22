@@ -4,6 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>NoteFlow</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBwOkY8YtNo6v0Luui_w38jsYTrAgEKTJA",
+    authDomain: "noteflow-d929a.firebaseapp.com",
+    databaseURL: "https://noteflow-d929a-default-rtdb.firebaseio.com",
+    projectId: "noteflow-d929a",
+    storageBucket: "noteflow-d929a.firebasestorage.app",
+    messagingSenderId: "670209032011",
+    appId: "1:670209032011:web:2bc38503e9b20192cdf2ce"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  // Give every browser session a colour so you can see who's typing
+  const COLORS = ['#1FD69C','#F5A342','#F0605A','#7B8CFF','#FF78C4','#4ECDC4'];
+  const myColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const myId    = 'user_' + Math.random().toString(36).slice(2, 8);
+
+  window._fb = { db, ref, onValue, set, push, serverTimestamp, myId, myColor };
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -422,6 +446,14 @@ aside {
 
 input[type=file] { display: none; }
 
+.live-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 20px;
+  background: var(--acbg); border: 1px solid rgba(31,214,156,.2);
+  font-size: 11.5px; font-weight: 600; color: var(--accent);
+  letter-spacing: .02em;
+}
+
 /* ═══════════════════════════════════════════════════════
    MOBILE  (<= 640px)
 ═══════════════════════════════════════════════════════ */
@@ -489,6 +521,7 @@ input[type=file] { display: none; }
   <div class="save-status" id="saveStatus">
     <div class="save-dot"></div><span>Saved</span>
   </div>
+  <div class="live-pill" id="onlinePill">connecting…</div>
   <div class="spacer"></div>
   <div class="hdr-actions">
     <button class="hdr-btn" onclick="downloadNote()" title="Download note as text file">
@@ -716,6 +749,7 @@ function commitSave() {
   const ss = document.getElementById('saveStatus');
   if (ss) { ss.classList.remove('saving'); ss.querySelector('span').textContent = 'Saved'; }
   renderSidebar();
+  if (window._pushToFirebase) window._pushToFirebase();
 }
 
 function persist() { try { localStorage.setItem(STORE, JSON.stringify(notes)); } catch(_) {} }
@@ -894,7 +928,53 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('docTitle').addEventListener('input', schedSave);
   document.getElementById('docBody').addEventListener('input', schedSave);
   init();
+  initFirebase();
 });
+
+// ── Firebase real-time sync ────────────────────────────
+function initFirebase() {
+  const poll = setInterval(() => {
+    if (!window._fb) return;
+    clearInterval(poll);
+    const { db, ref, onValue, set, myId, myColor } = window._fb;
+
+    // Show who's online
+    const presenceRef = ref(db, 'presence/' + myId);
+    set(presenceRef, { color: myColor, ts: Date.now() });
+
+    // Listen for shared note changes
+    const noteRef = ref(db, 'shared/note');
+    let remoteUpdate = false;
+    onValue(noteRef, (snap) => {
+      const data = snap.val();
+      if (!data || data.author === myId) return;
+      remoteUpdate = true;
+      const titleEl = document.getElementById('docTitle');
+      const bodyEl  = document.getElementById('docBody');
+      if (titleEl.textContent !== (data.title || '')) titleEl.textContent = data.title || '';
+      if (bodyEl.innerHTML   !== (data.body  || '')) bodyEl.innerHTML   = data.body  || '';
+      remoteUpdate = false;
+    });
+
+    // Push local changes
+    window._pushToFirebase = () => {
+      const title = document.getElementById('docTitle').textContent.trim();
+      const body  = document.getElementById('docBody').innerHTML;
+      set(ref(db, 'shared/note'), { title, body, author: myId, ts: Date.now() });
+    };
+
+    // Online count
+    const presAllRef = ref(db, 'presence');
+    onValue(presAllRef, (snap) => {
+      const users = snap.val() || {};
+      const recent = Object.values(users).filter(u => Date.now() - u.ts < 30000);
+      const count = recent.length;
+      const pill = document.getElementById('onlinePill');
+      if (pill) pill.textContent = count + ' online';
+    });
+    setInterval(() => set(presenceRef, { color: myColor, ts: Date.now() }), 15000);
+  }, 200);
+}
 </script>
 </body>
 </html>
