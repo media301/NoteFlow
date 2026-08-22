@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set, push, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
   const app = initializeApp({
     apiKey: "AIzaSyBwOkY8YtNo6v0Luui_w38jsYTrAgEKTJA",
     authDomain: "noteflow-d929a.firebaseapp.com",
@@ -23,7 +23,7 @@
   let myId    = localStorage.getItem('nf_id');
   if (!myColor) { myColor = COLORS[Math.floor(Math.random()*COLORS.length)]; localStorage.setItem('nf_color',myColor); }
   if (!myId)    { myId = 'u_'+Math.random().toString(36).slice(2,9); localStorage.setItem('nf_id',myId); }
-  window._fb = { db, ref, onValue, set, push, myId, myColor };
+  window._fb = { db, ref, onValue, set, push, get, myId, myColor };
 </script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -479,7 +479,10 @@ input[type=file]{display:none;}
   <div class="sheet-title">Who's Here</div>
   <div id="sheetWho"></div>
   <div style="margin-top:1.25rem">
-    <div class="sheet-title" style="font-size:13px">Topics</div>
+    <div class="sheet-title" style="font-size:13px;display:flex;align-items:center;justify-content:space-between">
+      Topics
+      <button class="add-btn" onclick="closeSheet();setTimeout(showNewTopic,150)" title="New topic">+</button>
+    </div>
     <div id="sheetTopics"></div>
   </div>
   <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
@@ -556,13 +559,33 @@ function signOut(){
   location.reload();
 }
 
+// ── NAME → STABLE ID ─────────────────────────────────
+function nameKey(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');}
+
 // ── FIREBASE ─────────────────────────────────────────
 function initFirebase(){
-  const poll=setInterval(()=>{
+  const poll=setInterval(async()=>{
     if(!window._fb)return;
     clearInterval(poll);
-    const{db,ref,onValue,set,push,myId:fbId,myColor:fbColor}=window._fb;
-    myId=fbId;myColor=fbColor;
+    const{db,ref,onValue,set,push,get,myId:fbId,myColor:fbColor}=window._fb;
+
+    // Look up (or create) a persistent identity keyed by name
+    // so the same person always gets the same color + ID on any device
+    const pkey=nameKey(myName);
+    try{
+      const snap=await get(ref(db,'profiles/'+pkey));
+      const profile=snap.val();
+      if(profile&&profile.id){
+        myId=profile.id;myColor=profile.color;
+        localStorage.setItem('nf_id',myId);localStorage.setItem('nf_color',myColor);
+      }else{
+        myId=fbId;myColor=fbColor;
+        set(ref(db,'profiles/'+pkey),{id:myId,color:myColor,name:myName,initials:myInitials});
+      }
+    }catch(_){myId=fbId;myColor=fbColor;}
+    // Update header pill with resolved color
+    const meDot=document.getElementById('meDot');
+    if(meDot){meDot.style.background=myColor;meDot.textContent=myInitials;}
 
     const presRef=ref(db,'presence/'+myId);
     const ping=()=>set(presRef,{name:myName,initials:myInitials,color:myColor,ts:Date.now()});
