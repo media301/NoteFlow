@@ -346,7 +346,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .sheet-overlay.show{display:block;}
 .bottom-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--card);
               border-radius:18px 18px 0 0;border-top:1px solid var(--brd2);
-              padding:1.1rem;z-index:401;max-height:75dvh;overflow-y:auto;
+              padding:1.1rem;z-index:401;max-height:88dvh;overflow-y:auto;
               transform:translateY(100%);transition:transform .25s ease;}
 .bottom-sheet.show{transform:translateY(0);}
 .sheet-handle{width:34px;height:4px;border-radius:2px;background:var(--brd2);margin:0 auto .9rem;}
@@ -370,6 +370,10 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 input[type=file]{display:none;}
 
 /* MOBILE */
+@media(max-width:600px){
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .modal{border-radius:18px 18px 0 0;max-height:85dvh;padding:1.5rem 1.25rem 2.5rem;}
+}
 @media(max-width:600px){
   aside{display:none;}
   .search-bar{max-width:none;flex:1;}
@@ -630,19 +634,11 @@ input[type=file]{display:none;}
 <div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
 <div class="bottom-sheet" id="bottomSheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-sec-title">Who's Here</div>
-  <div id="sheetWho"></div>
-  <div style="margin-top:1rem">
-    <div class="sheet-sec-title">
-      Topics
-      <button class="add-btn" onclick="closeSheet();setTimeout(showNewTopic,350)">+</button>
-    </div>
-    <div id="sheetTopics"></div>
+  <div class="sheet-sec-title">
+    Topics
+    <button class="add-btn" onclick="closeSheet();setTimeout(showNewTopic,350)">+</button>
   </div>
-  <div style="margin-top:1rem" id="sheetDmSection">
-    <div class="sheet-sec-title">Direct Messages</div>
-    <div id="sheetDmList"></div>
-  </div>
+  <div id="sheetTopics"></div>
   <div style="margin-top:1rem">
     <div class="sheet-sec-title">Views</div>
     <div class="nav-row" onclick="closeSheet();setTimeout(switchToActionItems,350)">
@@ -650,6 +646,14 @@ input[type=file]{display:none;}
       <span class="row-label">Action Items</span>
       <span class="row-count" id="sheetActionCount"></span>
     </div>
+  </div>
+  <div style="margin-top:1rem" id="sheetDmSection">
+    <div class="sheet-sec-title">Direct Messages</div>
+    <div id="sheetDmList"></div>
+  </div>
+  <div style="margin-top:1rem">
+    <div class="sheet-sec-title">Who's Here</div>
+    <div id="sheetWho"></div>
   </div>
   <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
     <button class="signout-btn" style="width:100%" onclick="signOut()">
@@ -1284,7 +1288,7 @@ function copyLink(){
 function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:-9999px;opacity:0';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');cb();}catch(_){toast('Copy the link manually',false);}document.body.removeChild(ta);}
 
 // ── MOBILE ───────────────────────────────────────────
-function openSheet(){document.getElementById('sheetOverlay').classList.add('show');document.getElementById('bottomSheet').classList.add('show');}
+function openSheet(){renderTopicList();document.getElementById('sheetOverlay').classList.add('show');document.getElementById('bottomSheet').classList.add('show');}
 function closeSheet(){document.getElementById('sheetOverlay').classList.remove('show');document.getElementById('bottomSheet').classList.remove('show');}
 
 // ── TOAST ─────────────────────────────────────────────
