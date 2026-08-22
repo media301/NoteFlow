@@ -1048,21 +1048,23 @@ function buildEntry(id,e,isDm){
 }
 
 // ── REACTIONS ────────────────────────────────────────
+function decodeEmojiKey(k){if(/^e\d+$/.test(k))return EMOJIS[parseInt(k.slice(1))]||'?';return k;}
 function updateReactionsEl(bar,entryId,reactions){
   const counts={};
-  Object.entries(reactions).forEach(([emoji,users])=>{
-    counts[emoji]=Object.keys(users).length;
+  Object.entries(reactions).forEach(([key,users])=>{
+    counts[key]=Object.keys(users).length;
   });
-  const myReactions=new Set(Object.entries(reactions).filter(([,u])=>u[myId]).map(([e])=>e));
-  let html=Object.entries(counts).filter(([,c])=>c>0).map(([emoji,c])=>
-    `<div class="reaction-pill${myReactions.has(emoji)?' mine':''}" data-emoji="${emoji}" data-entry="${entryId}">
-       ${emoji}<span class="count">${c}</span>
+  const myReactions=new Set(Object.entries(reactions).filter(([,u])=>u[myId]).map(([k])=>k));
+  let html=Object.entries(counts).filter(([,c])=>c>0).map(([key,c])=>
+    `<div class="reaction-pill${myReactions.has(key)?' mine':''}" data-emoji="${key}" data-entry="${entryId}">
+       ${decodeEmojiKey(key)}<span class="count">${c}</span>
      </div>`
   ).join('');
   if(Object.keys(counts).length<5)html+=`<button class="add-reaction-btn" data-entry="${entryId}">😊</button>`;
   bar.innerHTML=html;
   bar.querySelectorAll('.reaction-pill').forEach(pill=>{
-    pill.addEventListener('click',()=>toggleReaction(entryId,pill.dataset.emoji));
+    const emoji=decodeEmojiKey(pill.dataset.emoji);
+    pill.addEventListener('click',()=>toggleReaction(entryId,emoji));
   });
   bar.querySelectorAll('.add-reaction-btn').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();showEmojiPicker(entryId,btn);});
@@ -1086,10 +1088,11 @@ function toggleReaction(entryId,emoji){
   if(!window._fb)return;
   const{db,ref,set,remove}=window._fb;
   const basePath=currentView==='dm'?'dms/'+dmKey(myId,currentDmWith.userId):'topics/'+currentTopicId;
-  const path=basePath+'/entries/'+entryId+'/reactions/'+encodeURIComponent(emoji)+'/'+myId;
+  const ek='e'+(EMOJIS.indexOf(emoji)>=0?EMOJIS.indexOf(emoji):emoji.codePointAt(0).toString(16));
+  const path=basePath+'/entries/'+entryId+'/reactions/'+ek+'/'+myId;
   // Check if already reacted
   const bar=document.getElementById('rb_'+entryId);
-  const pill=bar&&bar.querySelector(`[data-emoji="${emoji}"]`);
+  const pill=bar&&bar.querySelector(`[data-emoji="${ek}"]`);
   if(pill&&pill.classList.contains('mine'))remove(ref(db,path));
   else set(ref(db,path),true);
 }
