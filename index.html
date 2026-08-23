@@ -805,7 +805,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 
 <script>
 'use strict';
-const TEAM_PASSPHRASE='globalarchery'; // ← change this to your secret phrase
+const TEAM_PASSPHRASES=['Group20']; // ← add/remove phrases here
 const EMOJIS=['👍','❤️','😂','🎉','💡'];
 let myName='',myInitials='',myColor='',myId='';
 let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,assignedUsers=[];
@@ -860,7 +860,7 @@ function proceedAfterAuth(){
 }
 function submitPassphrase(){
   const val=document.getElementById('passInput').value.trim();
-  if(val.toLowerCase()===TEAM_PASSPHRASE.toLowerCase()){
+  if(TEAM_PASSPHRASES.some(p=>p.toLowerCase()===val.toLowerCase())){
     localStorage.setItem('nf_auth','1');
     document.getElementById('passModal').classList.remove('show');
     proceedAfterAuth();
