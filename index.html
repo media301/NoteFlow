@@ -1095,9 +1095,10 @@ function createTopic(){
 
 // ── DMs ──────────────────────────────────────────────
 function dmKey(a,b){return [a,b].sort().join('__');}
-function openDm(userId,name,initials,color){
-  currentView='dm';currentDmWith={userId,name,initials,color};currentGroupId=null;
-  localStorage.setItem('seen_dm_'+dmKey(myId,userId),Date.now());
+function openDm(userId,name,initials,color,existingKey){
+  const key=existingKey||dmKey(myId,userId);
+  currentView='dm';currentDmWith={userId,name,initials,color,key};currentGroupId=null;
+  localStorage.setItem('seen_dm_'+key,Date.now());
   stopTypingIndicator();
   document.getElementById('paneTitle').innerHTML=
     `<div class="pane-dm-badge" style="background:${color}">${esc(initials)}</div>
@@ -1108,7 +1109,6 @@ function openDm(userId,name,initials,color){
   clearFeed();cancelReply();cancelActionTag();
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
-    const key=dmKey(myId,userId);
     set(ref(db,'dms/'+key+'/members/'+userId),{name,initials,color});
     set(ref(db,'dms/'+key+'/members/'+myId),{name:myName,initials:myInitials,color:myColor});
     onValue(ref(db,'dms/'+key+'/entries'),snap=>{
@@ -1119,12 +1119,24 @@ function openDm(userId,name,initials,color){
   }
   renderTopicList();renderDmList(allDmsData);closeSheet();
 }
-function getMyDms(data){
-  return Object.entries(data).filter(([k,dmData])=>{
-    if(k.split('__').includes(myId))return true;
-    if(myName&&dmData.members)return Object.values(dmData.members).some(m=>m.name===myName);
-    return false;
+// Returns deduplicated [{key,dmData,otherId,other}] — one entry per person, preferring whichever has more messages
+function resolveMyDms(data){
+  const byName={};
+  Object.entries(data).forEach(([key,dmData])=>{
+    const isMine=key.split('__').includes(myId)||
+      (myName&&dmData.members&&Object.values(dmData.members).some(m=>m.name===myName));
+    if(!isMine)return;
+    const otherId=getOtherIdFromDm(key,dmData);
+    if(!otherId)return;
+    const saved=(dmData.members&&dmData.members[otherId])||null;
+    const other=allUsers[otherId]||saved||allProfiles[otherId]||{name:'Unknown',initials:'?',color:'#888'};
+    const otherName=other.name||'Unknown';
+    const msgCount=Object.keys(dmData.entries||{}).length;
+    if(!byName[otherName]||msgCount>(byName[otherName].msgCount||0)){
+      byName[otherName]={key,dmData,otherId,other,msgCount};
+    }
   });
+  return Object.values(byName);
 }
 function getOtherIdFromDm(key,dmData){
   const parts=key.split('__');
@@ -1142,20 +1154,17 @@ function renderDmList(data){
   const sheetDmSection=document.getElementById('sheetDmSection');
   const sheetDmList=document.getElementById('sheetDmList');
   if(!data){if(dmSection)dmSection.style.display='none';if(sheetDmSection)sheetDmSection.style.display='none';return;}
-  const myDms=getMyDms(data);
+  const myDms=resolveMyDms(data);
   if(!myDms.length){if(dmSection)dmSection.style.display='none';if(sheetDmSection)sheetDmSection.style.display='none';return;}
   if(dmSection)dmSection.style.display='block';
   if(sheetDmSection)sheetDmSection.style.display='block';
-  const html=myDms.map(([key,dmData])=>{
-    const otherId=getOtherIdFromDm(key,dmData);
-    const saved=(dmData.members&&dmData.members[otherId])||null;
-    const other=allUsers[otherId]||saved||allProfiles[otherId]||{name:'Unknown',initials:'?',color:'#888'};
+  const html=myDms.map(({key,dmData,otherId,other})=>{
     const isActive=currentView==='dm'&&currentDmWith?.userId===otherId;
     const isOnline=!!allUsers[otherId];
     const entries=Object.values(dmData.entries||{});
     const lastSeen=parseInt(localStorage.getItem('seen_dm_'+key)||'0');
     const hasUnread=!isActive&&entries.some(e=>(e.ts||0)>lastSeen&&e.authorId!==myId&&e.name!==myName);
-    return `<div class="nav-row${isActive?' dm-active':''}" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}')">
+    return `<div class="nav-row${isActive?' dm-active':''}" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}','${esc(key)}')">
       <div style="position:relative;flex-shrink:0">
         <div style="background:${other.color};width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000">${esc(other.initials)}</div>
         ${isOnline?`<div style="position:absolute;bottom:-1px;right:-1px;width:7px;height:7px;border-radius:50%;background:#1FD69C;border:1.5px solid var(--surf)"></div>`:''}
@@ -1642,10 +1651,10 @@ function sendNote(){
   if(window._fb&&currentView==='topic'){const{db,ref,remove}=window._fb;remove(ref(db,'typing/'+currentTopicId+'/'+myId));}
 }
 function pushEntry(entry){if(!window._fb)return Promise.resolve(null);const{db,ref,push}=window._fb;return push(ref(db,'topics/'+currentTopicId+'/entries'),entry);}
-function pushDm(entry){if(!window._fb||!currentDmWith)return;const{db,ref,push}=window._fb;push(ref(db,'dms/'+dmKey(myId,currentDmWith.userId)+'/entries'),entry);}
+function pushDm(entry){if(!window._fb||!currentDmWith)return;const{db,ref,push}=window._fb;push(ref(db,'dms/'+(currentDmWith.key||dmKey(myId,currentDmWith.userId))+'/entries'),entry);}
 function pushGroup(entry){if(!window._fb||!currentGroupId)return;const{db,ref,push}=window._fb;push(ref(db,'groups/'+currentGroupId+'/entries'),entry);}
 function currentBasePath(){
-  if(currentView==='dm')return 'dms/'+dmKey(myId,currentDmWith.userId);
+  if(currentView==='dm')return 'dms/'+(currentDmWith.key||dmKey(myId,currentDmWith.userId));
   if(currentView==='group')return 'groups/'+currentGroupId;
   return 'topics/'+currentTopicId;
 }
@@ -1889,16 +1898,13 @@ function renderMobileDms(){
   const{db,ref,get}=window._fb;
   get(ref(db,'dms')).then(snap=>{
     const data=snap.val()||{};
-    const myDms=getMyDms(data);
+    const myDms=resolveMyDms(data);
     const sec=document.getElementById('mobileDmSec');
     const list=document.getElementById('mobileDmList');
     if(!myDms.length||!sec||!list){if(sec)sec.style.display='none';return;}
     sec.style.display='block';
-    list.innerHTML=myDms.map(([key,dmData])=>{
-      const otherId=getOtherIdFromDm(key,dmData);
-      const saved=(dmData.members&&dmData.members[otherId])||null;
-      const other=allUsers[otherId]||saved||allProfiles[otherId]||{name:'Unknown',initials:'?',color:'#888'};
-      return `<div class="nav-row" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}');showMobileTab('notes')">
+    list.innerHTML=myDms.map(({key,otherId,other})=>{
+      return `<div class="nav-row" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}','${esc(key)}');showMobileTab('notes')">
         <div style="background:${other.color};width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;flex-shrink:0">${esc(other.initials)}</div>
         <span class="row-label">${esc(other.name)}</span>
       </div>`;
