@@ -1430,7 +1430,7 @@ function renderActionItems(topicEntries,groupEntries){
   addSection('Assigned to Me','#F0605A',assignedToMe);
   addSection('My Action Items','var(--amber)',mine);
   addSection('Team Action Items','var(--dim)',others);
-  const fw=document.getElementById('feed');setTimeout(()=>{if(fw)fw.scrollTop=0;},50);
+  const fw=document.getElementById('feed');if(fw)fw.scrollTop=0;
   forceIosRepaint();
 }
 function updateActionCount(){
@@ -1669,7 +1669,7 @@ function renderFeed(data,isDm=false){
     }
     feed.appendChild(buildEntry(id,e,isDm));
   });
-  const fw=document.getElementById('feed');setTimeout(()=>{if(fw)fw.scrollTop=fw.scrollHeight;},50);
+  const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;
   markSeen(currentTopicId);
   forceIosRepaint();
 }
@@ -2258,11 +2258,12 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
   const feed=document.getElementById('feed');
-  if(!feed)return;
-  feed.style.animation='none';
-  void feed.offsetHeight;
-  feed.style.animation='_iosFix .1s forwards';
-  setTimeout(()=>{feed.style.animation='';},150);
+  if(!feed||!feed.parentNode)return;
+  const p=feed.parentNode,n=feed.nextSibling;
+  p.removeChild(feed);
+  void p.offsetHeight;
+  p.insertBefore(feed,n);
+  void p.offsetHeight;
 }
 let mobileTab='notes';
 function showMobileTab(tab){
@@ -2407,7 +2408,7 @@ function renderFiles(items){
       feed.appendChild(row);
     });
   });
-  const fw=document.getElementById('feed');setTimeout(()=>{if(fw)fw.scrollTop=0;},50);
+  const fw=document.getElementById('feed');if(fw)fw.scrollTop=0;
   forceIosRepaint();
 }
 
