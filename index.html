@@ -279,6 +279,8 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .typing-dots span:nth-child(2){animation-delay:.2s;}
 .typing-dots span:nth-child(3){animation-delay:.4s;}
 @keyframes tdot{0%,80%,100%{transform:scale(0.7);opacity:.5}40%{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.shake{animation:shake .4s ease;}
 
 /* INPUT */
 .input-area{background:var(--surf);border-top:1px solid var(--border);flex-shrink:0;}
@@ -626,6 +628,18 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   </div>
 </div>
 
+<!-- passphrase modal -->
+<div class="modal-overlay" id="passModal">
+  <div class="modal">
+    <div style="font-size:2.5rem">🔒</div>
+    <div class="modal-title">Team Access</div>
+    <div class="modal-sub">Enter the team passphrase to continue.</div>
+    <input class="modal-input" id="passInput" type="password" placeholder="Passphrase…" autocomplete="off" onkeydown="if(event.key==='Enter')submitPassphrase()">
+    <div id="passError" style="font-size:12px;color:var(--red);min-height:18px;text-align:center;margin-top:-8px"></div>
+    <button class="modal-primary" onclick="submitPassphrase()">Enter →</button>
+  </div>
+</div>
+
 <!-- name modal -->
 <div class="modal-overlay" id="nameModal">
   <div class="modal">
@@ -791,6 +805,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 
 <script>
 'use strict';
+const TEAM_PASSPHRASE='globalarchery'; // ← change this to your secret phrase
 const EMOJIS=['👍','❤️','😂','🎉','💡'];
 let myName='',myInitials='',myColor='',myId='';
 let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,assignedUsers=[];
@@ -838,10 +853,27 @@ function applyTheme(t){
 function toggleTheme(){applyTheme(isDark?'light':'dark');}
 
 // ── AUTO-LOGIN ───────────────────────────────────────
-(function(){
+function proceedAfterAuth(){
   const n=localStorage.getItem('nf_name'),i=localStorage.getItem('nf_initials');
   if(n&&i){myName=n;myInitials=i;startApp();}
   else{if(n)document.getElementById('nameInput').value=n;document.getElementById('nameModal').classList.add('show');}
+}
+function submitPassphrase(){
+  const val=document.getElementById('passInput').value.trim();
+  if(val.toLowerCase()===TEAM_PASSPHRASE.toLowerCase()){
+    localStorage.setItem('nf_auth','1');
+    document.getElementById('passModal').classList.remove('show');
+    proceedAfterAuth();
+  }else{
+    const inp=document.getElementById('passInput');
+    document.getElementById('passError').textContent='Incorrect passphrase — try again';
+    inp.classList.add('shake');inp.value='';
+    setTimeout(()=>{inp.classList.remove('shake');inp.focus();},400);
+  }
+}
+(function(){
+  if(!localStorage.getItem('nf_auth')){document.getElementById('passModal').classList.add('show');return;}
+  proceedAfterAuth();
 })();
 
 document.getElementById('nameInput').addEventListener('keydown',e=>{if(e.key==='Enter')joinSession();});
