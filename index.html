@@ -430,6 +430,8 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   .text-row{padding:6px .75rem 10px;}
   .entry-actions{opacity:1;}
   .pane-actions{display:none;}
+  #groupMembersBtn{display:none !important;}
+  #groupMembersBtn.grp-active{display:flex !important;}
   .tab-bar{display:flex;}
 }
 </style>
@@ -543,10 +545,10 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <div class="pane-title" id="paneTitle">
         <span class="pane-hash">#</span><span class="pane-label">general</span>
       </div>
+      <button class="pane-act-btn" id="groupMembersBtn" onclick="showGroupMembers(currentGroupId)">
+        👤 Members
+      </button>
       <div class="pane-actions">
-        <button class="pane-act-btn" id="groupMembersBtn" style="display:none" onclick="showGroupMembers(currentGroupId)">
-          👤 Members
-        </button>
         <button class="pane-act-btn" onclick="exportTopic()" title="Export notes">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
@@ -1090,7 +1092,7 @@ function markSeen(topicId){localStorage.setItem('seen_'+topicId,Date.now());}
 
 function switchTopic(topicId){
   currentView='topic';currentTopicId=topicId;currentDmWith=null;currentGroupId=null;
-  document.getElementById('groupMembersBtn').style.display='none';
+  document.getElementById('groupMembersBtn').classList.remove('grp-active');
   markSeen(topicId);
   clearMentionsForTopic(topicId);
   stopTypingIndicator();
@@ -1141,7 +1143,7 @@ function dmKey(a,b){return [a,b].sort().join('__');}
 function openDm(userId,name,initials,color,existingKey){
   const key=existingKey||dmKey(myId,userId);
   currentView='dm';currentDmWith={userId,name,initials,color,key};currentGroupId=null;
-  document.getElementById('groupMembersBtn').style.display='none';
+  document.getElementById('groupMembersBtn').classList.remove('grp-active');
   localStorage.setItem('seen_dm_'+key,Date.now());
   stopTypingIndicator();
   document.getElementById('paneTitle').innerHTML=
@@ -1767,9 +1769,12 @@ function renderGroupList(){
     </div>`;
   }).join('')||'<div class="sidebar-empty">No groups — create or join one</div>';
   const mobileRows=myGroups.map(([id,g])=>{
-    return `<div class="nav-row" onclick="switchGroup('${esc(id)}');showMobileTab('notes')">
-      <span class="row-icon" style="color:var(--purple)">👥</span>
-      <span class="row-label">${esc(g.name)}</span>
+    return `<div class="nav-row" style="display:flex;align-items:center">
+      <span style="display:flex;align-items:center;gap:6px;flex:1" onclick="switchGroup('${esc(id)}');showMobileTab('notes')">
+        <span class="row-icon" style="color:var(--purple)">👥</span>
+        <span class="row-label">${esc(g.name)}</span>
+      </span>
+      ${g.passphrase?`<button class="add-btn" style="width:auto;padding:0 6px;font-size:12px" onclick="shareGroupInvite('${esc(id)}')" title="Invite to group">✉️</button>`:''}
     </div>`;
   }).join('')||'<div class="sidebar-empty">No groups — create or join one</div>';
   const gl=document.getElementById('groupList');if(gl)gl.innerHTML=rows;
@@ -1781,7 +1786,7 @@ function switchGroup(groupId){
   const g=allGroups[groupId]||{name:groupId};
   document.getElementById('paneTitle').innerHTML=
     `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
-  document.getElementById('groupMembersBtn').style.display=g.passphrase?'':'none';
+  document.getElementById('groupMembersBtn').classList.toggle('grp-active',!!g.passphrase);
   document.getElementById('actionToolbar').style.display='flex';
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
@@ -1836,6 +1841,16 @@ function closeGroupMembers(){document.getElementById('groupMembersModal')?.class
 function copyGroupPass(){
   const p=document.getElementById('gmPassText').textContent;
   navigator.clipboard.writeText(p).then(()=>toast('Passphrase copied!',true));
+}
+function shareGroupInvite(groupId){
+  const g=allGroups[groupId]||{};
+  if(!g.passphrase)return;
+  const msg=`Join my "${g.name}" group on NoteFlow!\n\n1. Open ${location.href}\n2. Enter app passphrase: ${TEAM_PASSPHRASES[0]||''}\n3. Tap 🔑 next to Groups and enter: ${g.passphrase}`;
+  if(/iPhone|iPad|Android/i.test(navigator.userAgent)&&navigator.share){
+    navigator.share({title:'Join '+g.name,text:msg}).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(msg).then(()=>toast('Group invite copied!',true));
+  }
 }
 function shareGroupPass(){
   const g=allGroups[_gmGroupId]||{};
@@ -1989,6 +2004,16 @@ function closeSummary(){document.getElementById('summaryModal').classList.remove
 // ── SHARE ─────────────────────────────────────────────
 function showShare(){
   const isMobile=/iPhone|iPad|Android/i.test(navigator.userAgent);
+  // If inside a private group, share that group's invite instead
+  if(currentView==='group'&&currentGroupId){
+    const g=allGroups[currentGroupId]||{};
+    if(g.passphrase){
+      const msg=`Join my "${g.name}" group on NoteFlow!\n\n1. Open ${location.href}\n2. Enter app passphrase: ${TEAM_PASSPHRASES[0]||''}\n3. Tap 🔑 next to Groups and enter: ${g.passphrase}`;
+      if(isMobile&&navigator.share){navigator.share({title:'Join '+g.name,text:msg}).catch(()=>{});return;}
+      navigator.clipboard.writeText(msg).then(()=>toast('Group invite copied!',true));
+      return;
+    }
+  }
   const phrase=TEAM_PASSPHRASES[0]||'';
   const shareText=`Join our team on NoteFlow — tap the link and enter the passphrase: ${phrase}`;
   if(isMobile&&navigator.share){
