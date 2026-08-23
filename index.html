@@ -1430,7 +1430,7 @@ function parseMentions(text){
 
 function buildEntry(id,e,isDm){
   const div=document.createElement('div');
-  const isMe=e.authorId===myId;
+  const isMe=e.authorId===myId||(!!myName&&e.name===myName);
   div.className='note-entry'+(isMe&&isDm?' me':'');div.dataset.id=id;
   const time=e.ts?new Date(e.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';
   const initials=e.initials&&e.initials!=='undefined'?e.initials:'?';
