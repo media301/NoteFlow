@@ -216,6 +216,13 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .entry-time{font-size:10.5px;color:var(--dim);flex:1;}
 .action-badge{font-size:10px;font-weight:700;background:var(--amber);color:#000;
               border-radius:4px;padding:1px 5px;}
+.complete-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+              border:1.5px solid var(--dim);border-radius:4px;background:none;cursor:pointer;
+              font-size:11px;font-weight:700;flex-shrink:0;transition:all .15s;color:transparent;padding:0;}
+.complete-btn.done{background:var(--ac);border-color:var(--ac);color:#000;}
+.entry-bubble.is-done{opacity:.75;}
+.entry-bubble.is-done .entry-text{text-decoration:line-through;color:var(--dim);}
+.done-by-label{font-size:10px;color:var(--ac);font-weight:600;margin-bottom:4px;}
 .assign-chip{display:flex;align-items:center;gap:3px;padding:2px 7px 2px 3px;border-radius:20px;
   border:1.5px solid var(--border);cursor:pointer;font-size:11px;color:var(--dim2);
   transition:border-color .15s,background .15s;white-space:nowrap;flex-shrink:0;}
@@ -1101,8 +1108,10 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.6';
+  const _ver='v1.7';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
+  const _pdm=sessionStorage.getItem('_pendingDm');
+  if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
 }
 function initPWAIcons(){
   try{
@@ -1247,7 +1256,7 @@ function renderTeam(){
   const teamRows=Object.entries(allProfiles).map(([id,p])=>{
     const isOnline=!!allUsers[id];
     const isMe=id===myId;
-    return `<div class="who-row"${!isMe?` onclick="openDm('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}',findExistingDmKey('${esc(id)}'));showMobileTab('notes')"`:''}>
+    return `<div class="who-row"${!isMe?` onclick="iosDmOpen('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}',findExistingDmKey('${esc(id)}'))"`:''}>
       <div style="position:relative;flex-shrink:0">
         <div class="who-badge" style="background:${p.color}">${esc(p.initials)}</div>
         ${isOnline?`<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;background:#1FD69C;border:1.5px solid var(--surf)"></div>`:''}
@@ -1268,7 +1277,7 @@ function renderOnline(recent){
   count.textContent=recent.length+' online';
   document.getElementById('teamCount').textContent=recent.length;
   const rows=recent.map(([id,u])=>
-    `<div class="who-row"${id!==myId?` onclick="openDm('${esc(id)}','${esc(u.name)}','${esc(u.initials)}','${esc(u.color)}',findExistingDmKey('${esc(id)}'));showMobileTab('notes')"`:''}>
+    `<div class="who-row"${id!==myId?` onclick="iosDmOpen('${esc(id)}','${esc(u.name)}','${esc(u.initials)}','${esc(u.color)}',findExistingDmKey('${esc(id)}'))"`:''}>
        <div class="who-badge" style="background:${u.color}">${esc(u.initials)}</div>
        <span class="who-name">${esc(u.name)}${id===myId?'<span class="who-you" style="margin-left:4px">you</span>':''}</span>
        ${id!==myId?'<span class="dm-hint">DM</span>':''}
@@ -1370,6 +1379,10 @@ function findExistingDmKey(userId){
     }
   }
   return direct;
+}
+const _isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+function iosDmOpen(userId,name,initials,color,key){
+  openDm(userId,name,initials,color,key);showMobileTab('notes');
 }
 function openDm(userId,name,initials,color,existingKey){
   leaveDocMode();
@@ -1508,9 +1521,11 @@ function renderActionItems(topicEntries,groupEntries){
   if(!items.length){empty.classList.remove('fading');empty.style.display='flex';emptyMsg.textContent='No action items yet. Tag a note with ✅ Action Item to track it here.';return;}
   hideFeedEmpty(empty);
   const getAssignees=e=>e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];
-  const assignedToMe=items.filter(({e})=>getAssignees(e).some(u=>u.id===myId));
-  const mine=items.filter(({e})=>e.authorId===myId&&!getAssignees(e).some(u=>u.id===myId));
-  const others=items.filter(({e})=>e.authorId!==myId&&!getAssignees(e).some(u=>u.id===myId));
+  const incomplete=items.filter(({e})=>!e.completed);
+  const done=items.filter(({e})=>e.completed);
+  const assignedToMe=incomplete.filter(({e})=>getAssignees(e).some(u=>u.id===myId));
+  const mine=incomplete.filter(({e})=>e.authorId===myId&&!getAssignees(e).some(u=>u.id===myId));
+  const others=incomplete.filter(({e})=>e.authorId!==myId&&!getAssignees(e).some(u=>u.id===myId));
   const addSection=(label,color,list)=>{
     if(!list.length)return;
     const hdr=document.createElement('div');
@@ -1529,12 +1544,13 @@ function renderActionItems(topicEntries,groupEntries){
   addSection('Assigned to Me','#F0605A',assignedToMe);
   addSection('My Action Items','var(--amber)',mine);
   addSection('Team Action Items','var(--dim)',others);
+  addSection('Completed','var(--ac)',done);
   const fw=document.getElementById('feed');if(fw)fw.scrollTop=0;
   forceIosRepaint();
 }
 function updateActionCount(){
   let count=0;
-  Object.values(allEntries).forEach(entries=>Object.values(entries).forEach(e=>{if(e.isAction)count++;}));
+  Object.values(allEntries).forEach(entries=>Object.values(entries).forEach(e=>{if(e.isAction&&!e.completed)count++;}));
   document.getElementById('actionCount').textContent=count||'';
   const sc=document.getElementById('sheetActionCount');if(sc)sc.textContent=count||'';
 }
@@ -1801,14 +1817,15 @@ function buildEntry(id,e,isDm){
     ?`<div class="entry-file" onclick="downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')" style="cursor:pointer" title="Click to download"><span>${esc(e.icon||'📄')}</span><span style="flex:1">${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--ac);font-weight:600">↓ Download</span></div>`
     :`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--dim)">no download</span></div>`;
   else content=`<div class="entry-text">${parseMentions(e.text||'')}</div>`;
-  const bubbleClass='entry-bubble'+(e.isAction?' is-action':'')+(e.pinned?' is-pinned':'');
+  const bubbleClass='entry-bubble'+(e.isAction?' is-action':'')+(e.isAction&&e.completed?' is-done':'')+(e.pinned?' is-pinned':'');
   div.innerHTML=`
     <div class="entry-avatar" style="background:${e.color||'#888'}">${esc(initials)}</div>
     <div class="${bubbleClass}">
       <div class="entry-meta">
+        ${e.isAction?`<button class="complete-btn${e.completed?' done':''}" title="${e.completed?'Mark incomplete':'Mark complete'}">${e.completed?'✓':''}</button>`:''}
         <span class="entry-name" style="color:${e.color||'#888'}">${esc(name)}</span>
         <span class="entry-time">${time}${e.edited?' · edited':''}</span>
-        ${e.isAction?'<span class="action-badge">✅ Action</span>':''}
+        ${e.isAction&&!e.completed?'<span class="action-badge">✅ Action</span>':''}
         ${(()=>{const a=e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];return a.map(u=>`<span style="font-size:10px;background:var(--redbg);color:var(--red);border-radius:4px;padding:1px 6px;font-weight:700">→ ${esc(u.name)}</span>`).join('');})()}
         ${e.pinned?'<span class="pin-badge">📌</span>':''}
         <div class="entry-actions">
@@ -1819,6 +1836,7 @@ function buildEntry(id,e,isDm){
           ${isMe?`<button class="entry-act-btn del del-btn">🗑 Delete</button>`:''}
         </div>
       </div>
+      ${e.isAction&&e.completed&&e.completedBy?`<div class="done-by-label">✓ Done by ${esc(e.completedBy.name)}${e.completedAt?' · '+new Date(e.completedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):''}</div>`:''}
       ${quote}${content}
       <div class="reactions-bar" id="rb_${id}"></div>
     </div>`;
@@ -1827,6 +1845,7 @@ function buildEntry(id,e,isDm){
   const eb=div.querySelector('.edit-btn');if(eb)eb.addEventListener('click',()=>startInlineEdit(div,id,e));
   const pb=div.querySelector('.pin-btn');if(pb)pb.addEventListener('click',()=>togglePin(id,e));
   const db2=div.querySelector('.del-btn');if(db2)db2.addEventListener('click',()=>deleteEntry(id));
+  const cb=div.querySelector('.complete-btn');if(cb)cb.addEventListener('click',()=>toggleComplete(div,id,e));
   return div;
 }
 
@@ -1893,6 +1912,14 @@ function deleteEntry(entryId){
   const path=currentBasePath()+'/entries/'+entryId;
   remove(ref(db,path));
   document.querySelector(`.note-entry[data-id="${entryId}"]`)?.remove();
+}
+
+function toggleComplete(entryDiv,entryId,e){
+  if(!window._fb)return;
+  const{db,ref,set}=window._fb;
+  const basePath=entryDiv.dataset.basePath||currentBasePath();
+  const isComplete=!e.completed;
+  set(ref(db,basePath+'/entries/'+entryId),{...e,completed:isComplete,completedBy:isComplete?{id:myId,name:myName}:null,completedAt:isComplete?Date.now():null});
 }
 
 // ── REPLY ─────────────────────────────────────────────
@@ -2421,7 +2448,7 @@ function renderMobileDms(){
     if(!myDms.length||!sec||!list){if(sec)sec.style.display='none';return;}
     sec.style.display='block';
     list.innerHTML=myDms.map(({key,otherId,other})=>{
-      return `<div class="nav-row" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}','${esc(key)}');showMobileTab('notes')">
+      return `<div class="nav-row" onclick="iosDmOpen('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}','${esc(key)}')">
         <div style="background:${other.color};width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;flex-shrink:0">${esc(other.initials)}</div>
         <span class="row-label">${esc(other.name)}</span>
       </div>`;
