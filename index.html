@@ -2258,12 +2258,10 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 function forceIosRepaint(){
   clearTimeout(window._iosRepaintT);
   window._iosRepaintT=setTimeout(()=>{
-    const ep=document.querySelector('.editor-pane');
-    if(!ep)return;
-    ep.style.opacity='.9999';
-    void ep.offsetHeight;
-    ep.style.opacity='';
-    void ep.offsetHeight;
+    document.body.style.display='none';
+    void document.body.offsetHeight;
+    document.body.style.display='';
+    void document.body.offsetHeight;
   },50);
 }
 let mobileTab='notes';
