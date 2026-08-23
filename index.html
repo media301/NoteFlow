@@ -186,7 +186,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .search-clear{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;line-height:1;}
 
 /* FEED */
-.feed-wrap{flex:1;overflow-y:auto;min-height:0;position:relative;-webkit-overflow-scrolling:touch;}
+.feed-wrap{flex:1;overflow-y:auto;min-height:0;position:relative;}
 .feed-scroll{padding:1rem 1.25rem;display:flex;flex-direction:column;gap:10px;min-height:100%;}
 .feed-wrap::-webkit-scrollbar{width:3px;}
 .feed-wrap::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:3px;}
@@ -1610,8 +1610,6 @@ function clearFeed(){
 }
 function hideFeedEmpty(empty){
   if(empty.style.display==='none')return;
-  const fw=document.querySelector('.feed-wrap');
-  if(fw){fw.style.webkitOverflowScrolling='auto';void fw.offsetHeight;fw.style.webkitOverflowScrolling='touch';}
   empty.classList.add('fading');
   setTimeout(()=>{
     if(empty.classList.contains('fading')){empty.style.display='none';empty.classList.remove('fading');}
