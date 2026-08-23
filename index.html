@@ -223,6 +223,8 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .entry-bubble.is-done{opacity:.75;}
 .entry-bubble.is-done .entry-text{text-decoration:line-through;color:var(--dim);}
 .done-by-label{font-size:10px;color:var(--ac);font-weight:600;margin-bottom:4px;}
+.action-popover{position:fixed;z-index:9999;background:var(--card);border:1px solid var(--brd2);
+  border-radius:10px;padding:10px 12px;width:230px;box-shadow:0 4px 24px rgba(0,0,0,.45);}
 .assign-chip{display:flex;align-items:center;gap:3px;padding:2px 7px 2px 3px;border-radius:20px;
   border:1.5px solid var(--border);cursor:pointer;font-size:11px;color:var(--dim2);
   transition:border-color .15s,background .15s;white-space:nowrap;flex-shrink:0;}
@@ -1108,7 +1110,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.8';
+  const _ver='v1.9';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1777,8 +1779,13 @@ function renderFeed(data,isDm=false){
     if(existing.has(id)){
       const el=feed.querySelector(`.note-entry[data-id="${id}"]`);
       if(el){
-        const t=el.querySelector('.entry-text');if(t&&e.text!==undefined)t.textContent=parseMentions(e.text);
-        // Update reactions
+        const wasComplete=!!el.querySelector('.complete-btn.done');
+        if(e.isAction&&wasComplete!==!!e.completed){
+          const newEl=buildEntry(id,e,isDm);
+          if(el.dataset.basePath)newEl.dataset.basePath=el.dataset.basePath;
+          el.replaceWith(newEl);return;
+        }
+        const t=el.querySelector('.entry-text');if(t&&e.text!==undefined)t.innerHTML=parseMentions(e.text);
         const rb=el.querySelector('.reactions-bar');if(rb)updateReactionsEl(rb,id,e.reactions||{});
       }
       return;
@@ -1830,6 +1837,7 @@ function buildEntry(id,e,isDm){
         ${e.pinned?'<span class="pin-badge">📌</span>':''}
         <div class="entry-actions">
           ${!isDm?`<button class="entry-act-btn reply-btn">↩ Reply</button>`:''}
+          ${!isDm&&!e.isAction?`<button class="entry-act-btn action-make-btn">✅ Action</button>`:''}
           ${isMe&&(e.type==='text'||e.isAction)?`
             <button class="entry-act-btn edit-btn">✏ Edit</button>
             <button class="entry-act-btn${e.pinned?' pin-active':''} pin-btn">${e.pinned?'📌 Unpin':'📌 Pin'}</button>`:''}
@@ -1846,6 +1854,7 @@ function buildEntry(id,e,isDm){
   const pb=div.querySelector('.pin-btn');if(pb)pb.addEventListener('click',()=>togglePin(id,e));
   const db2=div.querySelector('.del-btn');if(db2)db2.addEventListener('click',()=>deleteEntry(id));
   const cb=div.querySelector('.complete-btn');if(cb)cb.addEventListener('click',()=>toggleComplete(div,id,e));
+  const amb=div.querySelector('.action-make-btn');if(amb)amb.addEventListener('click',ev=>{ev.stopPropagation();showActionPopover(div,id,e);});
   return div;
 }
 
@@ -1920,6 +1929,34 @@ function toggleComplete(entryDiv,entryId,e){
   const basePath=entryDiv.dataset.basePath||currentBasePath();
   const isComplete=!e.completed;
   set(ref(db,basePath+'/entries/'+entryId),{...e,completed:isComplete,completedBy:isComplete?{id:myId,name:myName}:null,completedAt:isComplete?Date.now():null});
+}
+
+function showActionPopover(entryDiv,entryId,e){
+  document.querySelectorAll('.action-popover').forEach(p=>p.remove());
+  const pop=document.createElement('div');pop.className='action-popover';
+  const profiles=Object.entries(allProfiles).filter(([id])=>id!==myId);
+  let selected=[];
+  const chipsHtml=profiles.map(([id,p])=>`<div class="assign-chip" data-id="${esc(id)}" data-name="${esc(p.name)}" data-initials="${esc(p.initials)}" data-color="${esc(p.color)}"><div class="ac-dot" style="background:${p.color}">${esc(p.initials)}</div><span>${esc(p.name.split(' ')[0])}</span></div>`).join('');
+  pop.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:8px">✅ Mark as Action Item</div><div style="font-size:10px;color:var(--dim);margin-bottom:6px">Assign to (optional):</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${chipsHtml||'<span style="font-size:11px;color:var(--dim)">No teammates yet</span>'}</div><button class="ap-save" style="background:var(--amber);color:#000;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%">Save</button>`;
+  document.body.appendChild(pop);
+  const rect=entryDiv.getBoundingClientRect();
+  pop.style.top=Math.min(rect.bottom+4,window.innerHeight-pop.offsetHeight-8)+'px';
+  pop.style.left=Math.min(rect.left,window.innerWidth-238)+'px';
+  pop.querySelectorAll('.assign-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const idx=selected.findIndex(u=>u.id===chip.dataset.id);
+      if(idx>=0){selected.splice(idx,1);chip.classList.remove('selected');}
+      else{selected.push({id:chip.dataset.id,name:chip.dataset.name,initials:chip.dataset.initials,color:chip.dataset.color});chip.classList.add('selected');}
+    });
+  });
+  pop.querySelector('.ap-save').addEventListener('click',()=>{
+    if(!window._fb)return;
+    const{db,ref,set}=window._fb;
+    const basePath=entryDiv.dataset.basePath||currentBasePath();
+    set(ref(db,basePath+'/entries/'+entryId),{...e,isAction:true,assignedTo:selected.length?selected:null});
+    pop.remove();
+  });
+  setTimeout(()=>document.addEventListener('click',()=>pop.remove(),{once:true}),0);
 }
 
 // ── REPLY ─────────────────────────────────────────────
