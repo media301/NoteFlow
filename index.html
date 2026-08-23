@@ -591,6 +591,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Sign Out
       </button>
+      <div id="appVerDesk" style="font-size:10px;color:var(--dim);text-align:center;margin-top:5px;opacity:.6"></div>
     </div>
   </aside>
 
@@ -902,6 +903,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Sign Out
     </button>
+    <div id="appVerMob" style="font-size:10px;color:var(--dim);text-align:center;margin-top:6px;opacity:.6"></div>
   </div>
 </div>
 
@@ -1099,6 +1101,8 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
+  const _ver=new Date(document.lastModified).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
 }
 function initPWAIcons(){
   try{
@@ -1385,11 +1389,6 @@ function openDm(userId,name,initials,color,existingKey){
   document.getElementById('filesRow')?.classList.remove('action-active');
   document.getElementById('feedEmptyMsg').textContent=`Send ${name} a message to start the conversation.`;
   clearFeed();cancelReply();cancelActionTag();forceIosRepaint();
-  const _dmKey=key;
-  requestAnimationFrame(()=>{
-    const _sync=allDmsData[_dmKey]?.entries;
-    if(_sync&&Object.keys(_sync).length)renderFeed(_sync,true);
-  });
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
     set(ref(db,'dms/'+key+'/members/'+userId),{name,initials,color});
@@ -2379,7 +2378,11 @@ function showMobileTab(tab){
     if(currentView==='group'&&currentGroupId){
       // stay in current group view — feed already live
     } else if(currentView==='dm'&&currentDmWith){
-      // stay in current DM view — feed already live
+      // Re-render synchronously now that the team panel is hidden (fixes iOS portrait bug)
+      const _k=currentDmWith.key;
+      clearFeed();
+      const _e=allDmsData[_k]?.entries;
+      if(_e&&Object.keys(_e).length)renderFeed(_e,true);
     } else if(currentView==='doc'&&currentDocId){
       // stay in current doc view — editor already live
     } else if(currentView==='files'||currentView==='actions'){
