@@ -186,6 +186,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .search-clear{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;line-height:1;}
 
 /* FEED */
+@keyframes _iosFix{from{opacity:.9999}to{opacity:1}}
 .feed-scroll{flex:1;overflow-y:auto;min-height:0;position:relative;
              padding:1rem 1.25rem;display:flex;flex-direction:column;gap:10px;}
 .feed-scroll::-webkit-scrollbar{width:3px;}
@@ -2258,10 +2259,10 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 function forceIosRepaint(){
   const feed=document.getElementById('feed');
   if(!feed)return;
-  feed.style.display='none';
+  feed.style.animation='none';
   void feed.offsetHeight;
-  feed.style.display='';
-  void feed.offsetHeight;
+  feed.style.animation='_iosFix .1s forwards';
+  setTimeout(()=>{feed.style.animation='';},150);
 }
 let mobileTab='notes';
 function showMobileTab(tab){
