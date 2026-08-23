@@ -1101,7 +1101,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='Aug 23 · 12:05 PM';
+  const _ver='v1.0';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
 }
 function initPWAIcons(){
@@ -2378,11 +2378,14 @@ function showMobileTab(tab){
     if(currentView==='group'&&currentGroupId){
       // stay in current group view — feed already live
     } else if(currentView==='dm'&&currentDmWith){
-      // Re-render synchronously now that the team panel is hidden (fixes iOS portrait bug)
       const _k=currentDmWith.key;
       clearFeed();
       const _e=allDmsData[_k]?.entries;
       if(_e&&Object.keys(_e).length)renderFeed(_e,true);
+      if('ontouchstart' in window){
+        const ep=document.querySelector('.editor-pane');
+        if(ep){ep.style.opacity='0.999';requestAnimationFrame(()=>{ep.style.opacity='';});}
+      }
     } else if(currentView==='doc'&&currentDocId){
       // stay in current doc view — editor already live
     } else if(currentView==='files'||currentView==='actions'){
