@@ -434,6 +434,30 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   #groupMembersBtn.grp-active{display:flex !important;}
   .tab-bar{display:flex;}
 }
+
+/* DOCUMENTS */
+#docPane{display:none;flex-direction:column;flex:1;overflow:hidden;}
+.editor-pane.doc-active #docPane{display:flex;}
+.editor-pane.doc-active .feed-scroll,
+.editor-pane.doc-active #typingStrip,
+.editor-pane.doc-active .input-area,
+.editor-pane.doc-active #pinnedStrip,
+.editor-pane.doc-active #dictateStrip,
+.editor-pane.doc-active .search-results-bar,
+.editor-pane.doc-active .pane-actions{display:none!important;}
+.doc-toolbar{display:flex;gap:4px;padding:6px 10px;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;align-items:center;}
+.doc-fmt-btn{padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--dim2);font-family:inherit;font-size:12px;cursor:pointer;transition:background .15s,color .15s;}
+.doc-fmt-btn:hover{background:var(--card2);color:var(--text);}
+.doc-fmt-sep{width:1px;height:16px;background:var(--brd2);flex-shrink:0;margin:0 2px;}
+.doc-editor-wrap{flex:1;overflow-y:auto;padding:1.5rem 2rem;-webkit-overflow-scrolling:touch;}
+.doc-editor{outline:none;min-height:calc(100vh - 160px);font-size:15px;line-height:1.75;color:var(--text);caret-color:var(--ac);word-break:break-word;}
+.doc-editor:empty:before{content:attr(placeholder);color:var(--dim);pointer-events:none;display:block;}
+.doc-editor h1{font-size:1.6rem;font-weight:700;letter-spacing:-.02em;margin:1rem 0 .4rem;line-height:1.3;}
+.doc-editor h2{font-size:1.2rem;font-weight:700;margin:.7rem 0 .3rem;}
+.doc-editor h3{font-size:1rem;font-weight:600;margin:.5rem 0 .25rem;}
+.doc-editor ul,.doc-editor ol{padding-left:1.5rem;margin:.3rem 0;}
+.doc-editor li{margin:.15rem 0;}
+@media(max-width:700px){.doc-editor-wrap{padding:.75rem 1rem;}}
 </style>
 </head>
 <body>
@@ -524,6 +548,10 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
           </span>
         </div>
         <div id="groupList"><div class="sidebar-empty">No groups — create or join one</div></div>
+      </div>
+      <div class="sidebar-sec" id="docSection">
+        <div class="sidebar-label">Documents <button class="add-btn" onclick="showNewDoc()" title="New document">+</button></div>
+        <div id="docList"><div class="sidebar-empty">No documents yet</div></div>
       </div>
       <div class="sidebar-sec" id="dmSection" style="display:none">
         <div class="sidebar-label">Direct Messages</div>
@@ -645,6 +673,30 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         </button>
       </div>
     </div>
+
+    <!-- Document editor pane — shown only in doc view -->
+    <div id="docPane">
+      <div class="doc-toolbar">
+        <button class="doc-fmt-btn" onmousedown="event.preventDefault()" onclick="docFmt('bold')" title="Bold"><strong>B</strong></button>
+        <button class="doc-fmt-btn" onmousedown="event.preventDefault()" onclick="docFmt('italic')" title="Italic"><em>I</em></button>
+        <button class="doc-fmt-btn" onmousedown="event.preventDefault()" onclick="docFmt('underline')" title="Underline"><u>U</u></button>
+        <div class="doc-fmt-sep"></div>
+        <button class="doc-fmt-btn" onmousedown="event.preventDefault()" onclick="docBlock('h1')" title="Heading 1">H1</button>
+        <button class="doc-fmt-btn" onmousedown="event.preventDefault()" onclick="docBlock('h2')" title="Heading 2">H2</button>
+        <button class="doc-fmt-btn" onmousedown="event.preventDefault()" onclick="docBlock('p')" title="Normal text">¶</button>
+        <div class="doc-fmt-sep"></div>
+        <button class="doc-fmt-btn" onmousedown="event.preventDefault()" onclick="docFmt('insertUnorderedList')" title="Bullet list">• List</button>
+        <button class="doc-fmt-btn" onmousedown="event.preventDefault()" onclick="docFmt('insertOrderedList')" title="Numbered list">1. List</button>
+        <div class="doc-fmt-sep"></div>
+        <span id="docEditIndicator" style="display:none;font-size:11px;color:var(--amber);margin-left:4px"></span>
+        <span id="docSaveStatus" style="font-size:11px;color:var(--dim);margin-left:auto"></span>
+      </div>
+      <div class="doc-editor-wrap">
+        <div id="docEditor" class="doc-editor" contenteditable="true"
+             placeholder="Start typing your document…"
+             oninput="onDocInput()" onblur="onDocBlur()"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -734,6 +786,18 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     </div>
     <button class="modal-secondary" onclick="closeGroupMembers()">Close</button>
     <button class="entry-act-btn del" id="gmDeleteBtn" style="display:none;margin-top:8px;width:100%;justify-content:center;padding:8px" onclick="deleteGroup()">🗑 Delete Group</button>
+  </div>
+</div>
+
+<!-- new doc modal -->
+<div class="modal-overlay" id="newDocModal" onclick="if(event.target===this)closeNewDoc()">
+  <div class="modal">
+    <div style="font-size:1.8rem">📄</div>
+    <div class="modal-title">New Document</div>
+    <div class="modal-sub">Give your document a name — your team can collaborate on it in real time</div>
+    <input class="modal-input" id="newDocInput" placeholder="Document name…" maxlength="60" autocomplete="off" onkeydown="if(event.key==='Enter')createDoc()">
+    <button class="modal-primary" onclick="createDoc()">Create Document →</button>
+    <button class="modal-secondary" onclick="closeNewDoc()">Cancel</button>
   </div>
 </div>
 
@@ -830,11 +894,16 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <div class="mobile-panel-label">Groups <span style="display:flex;gap:4px"><button class="add-btn" onclick="showJoinGroup()">🔑</button><button class="add-btn" onclick="showNewGroup()">+</button></span></div>
     <div id="mobileGroupList"><div class="sidebar-empty">No groups yet</div></div>
   </div>
+  <div class="mobile-panel-sec">
+    <div class="mobile-panel-label">Documents <button class="add-btn" onclick="showNewDoc()">+</button></div>
+    <div id="mobileDocList"><div class="sidebar-empty">No documents yet</div></div>
+  </div>
 </div>
 <div class="mobile-panel" id="mobileTeamPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <span style="font-size:15px;font-weight:700">Team</span>
     <div style="display:flex;gap:8px;align-items:center">
+      <button class="icon-btn" onclick="window.open('https://claude.ai/code/artifact/490e8740-076d-4015-8e16-5ea9bef9228b','_blank')" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
       <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
       <button class="hdr-btn primary" style="padding:5px 10px;font-size:12px" onclick="showShare()">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -866,9 +935,10 @@ const TEAM_PASSPHRASES=['Group20']; // ← add/remove phrases here
 const EMOJIS=['👍','❤️','😂','🎉','💡'];
 let myName='',myInitials='',myColor='',myId='';
 let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,assignedUsers=[];
-let currentView='topic',currentTopicId='general',currentDmWith=null,currentGroupId=null;
-let allTopics={},allUsers={},allEntries={},allProfiles={},allGroups={},allDmsData={};
+let currentView='topic',currentTopicId='general',currentDmWith=null,currentGroupId=null,currentDocId=null;
+let allTopics={},allUsers={},allEntries={},allProfiles={},allGroups={},allDmsData={},allDocs={};
 let myGroupIds=new Set();
+let docSaveTimer=null,docTypingTimer=null;
 let typingTimer=null,searchQuery='',isDark=true;
 
 // Textarea
@@ -1026,6 +1096,7 @@ function initFirebase(){
     onValue(ref(db,'dms'),snap=>{allDmsData=snap.val()||{};renderDmList(allDmsData);});
     onValue(ref(db,'groups/meta'),snap=>{allGroups=snap.val()||{};renderGroupList();});
     onValue(ref(db,'userGroups/'+myId),snap=>{myGroupIds=new Set(Object.keys(snap.val()||{}));renderGroupList();});
+    onValue(ref(db,'docs/meta'),snap=>{allDocs=snap.val()||{};renderDocList();});
     listenMentions();
     switchTopic('general');
   },200);
@@ -1096,6 +1167,7 @@ function isUnread(topicId){
 function markSeen(topicId){localStorage.setItem('seen_'+topicId,Date.now());}
 
 function switchTopic(topicId){
+  leaveDocMode();
   currentView='topic';currentTopicId=topicId;currentDmWith=null;currentGroupId=null;
   document.getElementById('groupMembersBtn').classList.remove('grp-active');
   markSeen(topicId);
@@ -1146,6 +1218,7 @@ function createTopic(){
 // ── DMs ──────────────────────────────────────────────
 function dmKey(a,b){return [a,b].sort().join('__');}
 function openDm(userId,name,initials,color,existingKey){
+  leaveDocMode();
   const key=existingKey||dmKey(myId,userId);
   currentView='dm';currentDmWith={userId,name,initials,color,key};currentGroupId=null;
   document.getElementById('groupMembersBtn').classList.remove('grp-active');
@@ -1230,6 +1303,7 @@ function renderDmList(data){
 
 // ── ACTION ITEMS ─────────────────────────────────────
 function switchToActionItems(){
+  leaveDocMode();
   currentView='actions';currentDmWith=null;currentGroupId=null;
   document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--amber)">✅</span><span class="pane-label">Action Items</span>`;
   document.getElementById('actionToolbar').style.display='none';
@@ -1786,6 +1860,7 @@ function renderGroupList(){
   const mgl=document.getElementById('mobileGroupList');if(mgl)mgl.innerHTML=mobileRows;
 }
 function switchGroup(groupId){
+  leaveDocMode();
   currentView='group';currentGroupId=groupId;currentDmWith=null;
   stopTypingIndicator();cancelReply();cancelActionTag();
   const g=allGroups[groupId]||{name:groupId};
@@ -2081,6 +2156,8 @@ function showMobileTab(tab){
       // stay in current group view — feed already live
     } else if(currentView==='dm'&&currentDmWith){
       // stay in current DM view — feed already live
+    } else if(currentView==='doc'&&currentDocId){
+      // stay in current doc view — editor already live
     } else {
       clearFeed();renderFeed(allEntries[currentTopicId]||{});
       currentView='topic';
@@ -2126,6 +2203,136 @@ function closeSheet(){document.getElementById('sheetOverlay').classList.remove('
 // ── TOAST ─────────────────────────────────────────────
 function toast(msg,ok){const el=document.getElementById('toast');if(toastT)clearTimeout(toastT);el.textContent=msg;el.className='show'+(ok?' ok':'');toastT=setTimeout(()=>{el.className='';},3000);}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── DOCUMENTS ──────────────────────────────────────────
+function renderDocList(){
+  const sorted=Object.entries(allDocs).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  const makeRow=(id,d,mobile)=>{
+    const isActive=!mobile&&currentView==='doc'&&currentDocId===id;
+    const click=mobile?`openDoc('${esc(id)}');showMobileTab('notes')`:`openDoc('${esc(id)}')`;
+    const sub=d.lastEditedBy?`<span class="row-count" style="font-size:10px">${esc(d.lastEditedBy)}</span>`:'';
+    return `<div class="nav-row${isActive?' active':''}" onclick="${click}">
+      <span class="row-icon" style="color:var(--amber)">📄</span>
+      <span class="row-label">${esc(d.name)}</span>${sub}
+    </div>`;
+  };
+  const empty='<div class="sidebar-empty">No documents yet</div>';
+  const dl=document.getElementById('docList');
+  if(dl)dl.innerHTML=sorted.map(([id,d])=>makeRow(id,d,false)).join('')||empty;
+  const mdl=document.getElementById('mobileDocList');
+  if(mdl)mdl.innerHTML=sorted.map(([id,d])=>makeRow(id,d,true)).join('')||empty;
+}
+
+function openDoc(docId){
+  clearDocTyping();
+  document.querySelector('.editor-pane').classList.add('doc-active');
+  currentView='doc';currentDocId=docId;currentDmWith=null;currentGroupId=null;
+  document.getElementById('groupMembersBtn').classList.remove('grp-active');
+  document.getElementById('actionItemsRow').classList.remove('action-active');
+  stopTypingIndicator();cancelReply();cancelActionTag();closeSheet();
+  const d=allDocs[docId]||{name:'Document'};
+  document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--amber)">📄</span><span class="pane-label">${esc(d.name)}</span>`;
+  const status=document.getElementById('docSaveStatus');if(status)status.textContent='';
+  const ind=document.getElementById('docEditIndicator');if(ind){ind.textContent='';ind.style.display='none';}
+  const editor=document.getElementById('docEditor');if(editor)editor.innerHTML='';
+  renderDocList();renderGroupList();renderTopicList();renderDmList(allDmsData);
+  if(!window._fb)return;
+  const{db,ref,onValue}=window._fb;
+  onValue(ref(db,'docs/'+docId+'/content'),snap=>{
+    if(currentView!=='doc'||currentDocId!==docId)return;
+    const content=snap.val()||'';
+    const ed=document.getElementById('docEditor');if(!ed)return;
+    if(document.activeElement!==ed)ed.innerHTML=content;
+  });
+  onValue(ref(db,'docTyping/'+docId),snap=>{
+    if(currentView!=='doc'||currentDocId!==docId)return;
+    const data=snap.val()||{};
+    const others=Object.entries(data).filter(([uid])=>uid!==myId);
+    const indicator=document.getElementById('docEditIndicator');if(!indicator)return;
+    if(others.length){indicator.textContent=others.map(([,v])=>v.name).join(', ')+' is editing…';indicator.style.display='inline';}
+    else{indicator.textContent='';indicator.style.display='none';}
+  });
+}
+
+function leaveDocMode(){
+  if(currentView!=='doc')return;
+  document.querySelector('.editor-pane').classList.remove('doc-active');
+  clearDocTyping();
+  if(docSaveTimer){clearTimeout(docSaveTimer);docSaveTimer=null;saveDoc();}
+  currentDocId=null;
+}
+
+function onDocInput(){
+  if(currentView!=='doc'||!currentDocId)return;
+  const status=document.getElementById('docSaveStatus');if(status)status.textContent='Saving…';
+  setDocTyping();
+  clearTimeout(docSaveTimer);
+  docSaveTimer=setTimeout(saveDoc,900);
+}
+
+function setDocTyping(){
+  if(!window._fb||!currentDocId)return;
+  const{db,ref,set}=window._fb;
+  set(ref(db,'docTyping/'+currentDocId+'/'+myId),{name:myName,ts:Date.now()});
+  clearTimeout(docTypingTimer);
+  docTypingTimer=setTimeout(clearDocTyping,3000);
+}
+
+function clearDocTyping(){
+  clearTimeout(docTypingTimer);
+  if(!window._fb||!currentDocId)return;
+  const{db,ref,remove}=window._fb;
+  remove(ref(db,'docTyping/'+currentDocId+'/'+myId));
+}
+
+function onDocBlur(){
+  clearDocTyping();
+  if(docSaveTimer){clearTimeout(docSaveTimer);docSaveTimer=null;saveDoc();}
+}
+
+function saveDoc(){
+  docSaveTimer=null;
+  if(!window._fb||!currentDocId)return;
+  const{db,ref,set}=window._fb;
+  const ed=document.getElementById('docEditor');if(!ed)return;
+  const content=ed.innerHTML;
+  set(ref(db,'docs/'+currentDocId+'/content'),content);
+  set(ref(db,'docs/meta/'+currentDocId+'/lastEditedBy'),myName);
+  set(ref(db,'docs/meta/'+currentDocId+'/lastEditedAt'),Date.now());
+  const status=document.getElementById('docSaveStatus');
+  if(status){status.textContent='✓ Saved';setTimeout(()=>{if(status&&status.textContent==='✓ Saved')status.textContent='';},2500);}
+}
+
+function docFmt(cmd){document.getElementById('docEditor').focus();document.execCommand(cmd);}
+function docBlock(tag){document.getElementById('docEditor').focus();document.execCommand('formatBlock',false,'<'+tag+'>');}
+
+function showNewDoc(){
+  document.getElementById('newDocModal').classList.add('show');
+  document.getElementById('newDocInput').value='';
+  setTimeout(()=>document.getElementById('newDocInput').focus(),100);
+}
+function closeNewDoc(){document.getElementById('newDocModal').classList.remove('show');}
+function createDoc(){
+  const name=document.getElementById('newDocInput').value.trim();
+  if(!name){toast('Document name required');return;}
+  if(!window._fb){toast('Not connected');return;}
+  const{db,ref,set}=window._fb;
+  const id='doc_'+Date.now().toString(36);
+  set(ref(db,'docs/meta/'+id),{name,createdBy:myName,creatorId:myId,ts:Date.now()});
+  set(ref(db,'docs/'+id+'/content'),'');
+  closeNewDoc();
+  setTimeout(()=>openDoc(id),300);
+}
+function deleteDoc(docId){
+  const d=allDocs[docId]||{};
+  if(!window.confirm('Delete "'+d.name+'"? This cannot be undone.'))return;
+  if(!window._fb)return;
+  const{db,ref,remove}=window._fb;
+  remove(ref(db,'docs/meta/'+docId));
+  remove(ref(db,'docs/'+docId));
+  if(currentDocId===docId){leaveDocMode();switchTopic('general');}
+  toast(d.name+' deleted',true);
+}
 </script>
 </body>
 </html>
