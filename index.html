@@ -1695,7 +1695,7 @@ function buildEntry(id,e,isDm){
         <div class="entry-quote-text"><strong style="color:${e.replyTo.color}">${esc(e.replyTo.name)}: </strong>${esc(e.replyTo.text||'')}</div>
       </div>`:'';
   let content='';
-  if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}" onload="forceIosRepaint()"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
+  if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
   else if(e.type==='file')content=e.src
     ?`<div class="entry-file" onclick="downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')" style="cursor:pointer" title="Click to download"><span>${esc(e.icon||'📄')}</span><span style="flex:1">${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--ac);font-weight:600">↓ Download</span></div>`
     :`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--dim)">no download</span></div>`;
@@ -2256,10 +2256,12 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
-  document.body.style.display='none';
-  void document.body.offsetHeight;
-  document.body.style.display='';
-  void document.body.offsetHeight;
+  const feed=document.getElementById('feed');
+  if(!feed)return;
+  feed.style.display='none';
+  void feed.offsetHeight;
+  feed.style.display='';
+  void feed.offsetHeight;
 }
 let mobileTab='notes';
 function showMobileTab(tab){
