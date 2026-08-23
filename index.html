@@ -723,8 +723,15 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   </div>
 </div>
 <div class="mobile-panel" id="mobileTeamPanel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <span style="font-size:15px;font-weight:700">Team</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
+      <button class="signout-btn" style="padding:6px 12px" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
   <div class="mobile-panel-sec">
-    <div class="mobile-panel-label">Who's Here</div>
+    <div class="mobile-panel-label">Members</div>
     <div id="mobileWhoList"></div>
   </div>
   <div class="mobile-panel-sec" id="mobileDmSec" style="display:none">
@@ -1554,8 +1561,10 @@ function showMobileTab(tab){
   if(tab==='actions'){switchToActionItems();mobileTab='actions';}
   if(tab==='notes'){
     document.getElementById('actionItemsRow')?.classList.remove('action-active');
-    if(currentView==='actions')switchTopic(currentTopicId);
+    clearFeed();renderFeed(allEntries[currentTopicId]||{});
+    currentView='topic';
   }
+  if(tab==='team'){renderTeam();renderMobileDms();}
   renderMobilePanels();
 }
 function renderMobilePanels(){
@@ -1570,6 +1579,27 @@ function renderMobilePanels(){
         ${isUnread(id)?'<div class="row-badge-dot"></div>':''}
       </div>`).join('');
   }
+}
+function renderMobileDms(){
+  if(!window._fb||!myId)return;
+  const{db,ref,get}=window._fb;
+  get(ref(db,'dms')).then(snap=>{
+    const data=snap.val()||{};
+    const myDms=Object.entries(data).filter(([k])=>k.includes(myId));
+    const sec=document.getElementById('mobileDmSec');
+    const list=document.getElementById('mobileDmList');
+    if(!myDms.length||!sec||!list){if(sec)sec.style.display='none';return;}
+    sec.style.display='block';
+    list.innerHTML=myDms.map(([key,dmData])=>{
+      const otherId=key.replace(myId,'').replace(/^__|__$/,'');
+      const saved=(dmData.members&&dmData.members[otherId])||null;
+      const other=allUsers[otherId]||saved||allProfiles[otherId]||{name:'Unknown',initials:'?',color:'#888'};
+      return `<div class="nav-row" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}');showMobileTab('notes')">
+        <div style="background:${other.color};width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;flex-shrink:0">${esc(other.initials)}</div>
+        <span class="row-label">${esc(other.name)}</span>
+      </div>`;
+    }).join('');
+  });
 }
 function openSheet(){renderTopicList();document.getElementById('sheetOverlay').classList.add('show');document.getElementById('bottomSheet').classList.add('show');}
 function closeSheet(){document.getElementById('sheetOverlay').classList.remove('show');document.getElementById('bottomSheet').classList.remove('show');}
