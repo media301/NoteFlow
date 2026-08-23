@@ -725,6 +725,8 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     </div>
     <div id="gmMemberList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
     <div id="gmEditRow" style="display:none;margin-bottom:12px">
+      <input class="modal-input" id="gmNewName" placeholder="New group name…" maxlength="40" style="margin-bottom:6px">
+      <button class="modal-primary" onclick="updateGroupName()" style="padding:8px;margin-bottom:8px">Update Name</button>
       <input class="modal-input" id="gmNewPass" placeholder="New passphrase…" maxlength="60" style="margin-bottom:6px">
       <button class="modal-primary" onclick="updateGroupPass()" style="padding:8px">Update Passphrase</button>
     </div>
@@ -1810,10 +1812,14 @@ async function showGroupMembers(groupId){
   document.getElementById('gmTitle').textContent=g.name+' — Members';
   const passRow=document.getElementById('gmPassRow');
   const editRow=document.getElementById('gmEditRow');
-  if(isAdmin&&g.passphrase){
-    passRow.style.display='block';
-    document.getElementById('gmPassText').textContent=g.passphrase;
+  if(isAdmin){
     editRow.style.display='block';
+    if(g.passphrase){
+      passRow.style.display='block';
+      document.getElementById('gmPassText').textContent=g.passphrase;
+    } else {
+      passRow.style.display='none';
+    }
   } else {
     passRow.style.display='none';
     editRow.style.display='none';
@@ -1861,6 +1867,16 @@ function shareGroupPass(){
   } else {
     navigator.clipboard.writeText(msg).then(()=>toast('Invite text copied!',true));
   }
+}
+async function updateGroupName(){
+  const nn=document.getElementById('gmNewName').value.trim();
+  if(!nn||!_gmGroupId)return;
+  const{db,ref,set}=window._fb;
+  const g=allGroups[_gmGroupId]||{};
+  await set(ref(db,'groups/meta/'+_gmGroupId),{...g,name:nn});
+  document.getElementById('gmTitle').textContent=nn+' — Members';
+  document.getElementById('gmNewName').value='';
+  toast('Group renamed to '+nn,true);
 }
 async function updateGroupPass(){
   const np=document.getElementById('gmNewPass').value.trim();
