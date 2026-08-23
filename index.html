@@ -2261,13 +2261,11 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
-  const ep=document.querySelector('.editor-pane');
-  if(!ep||!ep.parentNode)return;
-  const p=ep.parentNode,n=ep.nextSibling;
-  p.removeChild(ep);
-  void p.offsetHeight;
-  p.insertBefore(ep,n);
-  void p.offsetHeight;
+  const meta=document.querySelector('meta[name="viewport"]');
+  if(!meta)return;
+  const orig=meta.content;
+  meta.content='width=device-width,initial-scale=1.001';
+  requestAnimationFrame(()=>{meta.content=orig;});
 }
 let mobileTab='notes';
 function showMobileTab(tab){
