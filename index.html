@@ -242,7 +242,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .entry-file:hover{border-color:var(--ac);background:var(--acbg);}
 /* FILE LIBRARY */
 .file-lib-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf);
-              border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:default;}
+              border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:default;width:100%;}
 .file-lib-row.downloadable{cursor:pointer;}
 .file-lib-row.downloadable:hover{border-color:var(--ac);background:var(--acbg);}
 .file-lib-icon{font-size:1.5rem;flex-shrink:0;line-height:1;}
@@ -1350,7 +1350,7 @@ function switchToActionItems(){
   document.getElementById('actionToolbar').style.display='none';
   document.getElementById('actionItemsRow').classList.add('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
-  clearFeed();
+  clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading action items…';
   renderTopicList();closeSheet();
   if(!window._fb){renderActionItems({});return;}
   const{db,ref,get}=window._fb;
@@ -1588,7 +1588,7 @@ function clearSearch(){
 // ── FEED ─────────────────────────────────────────────
 function clearFeed(){
   const feed=document.getElementById('feed');
-  [...feed.querySelectorAll('.note-entry')].forEach(el=>el.remove());
+  [...feed.children].forEach(el=>{if(el.id!=='feedEmpty')el.remove();});
   document.getElementById('feedEmpty').style.display='flex';
 }
 function renderFeed(data,isDm=false){
@@ -2266,7 +2266,7 @@ function switchToFiles(){
   document.getElementById('groupMembersBtn').classList.remove('grp-active');
   document.getElementById('actionItemsRow').classList.remove('action-active');
   document.getElementById('filesRow').classList.add('action-active');
-  clearFeed();renderTopicList();closeSheet();
+  clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading files…';renderTopicList();closeSheet();
   if(!window._fb){renderFiles([]);return;}
   const{db,ref,get}=window._fb;
   const topicIds=Object.keys(allTopics);
