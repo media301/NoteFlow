@@ -2257,12 +2257,12 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
-  const feed=document.getElementById('feed');
-  if(!feed||!feed.parentNode)return;
-  const p=feed.parentNode,n=feed.nextSibling;
-  p.removeChild(feed);
+  const ep=document.querySelector('.editor-pane');
+  if(!ep||!ep.parentNode)return;
+  const p=ep.parentNode,n=ep.nextSibling;
+  p.removeChild(ep);
   void p.offsetHeight;
-  p.insertBefore(feed,n);
+  p.insertBefore(ep,n);
   void p.offsetHeight;
 }
 let mobileTab='notes';
