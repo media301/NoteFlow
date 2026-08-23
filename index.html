@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>NoteFlow</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NoteFlow">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#09090E">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -369,26 +374,47 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 
 input[type=file]{display:none;}
 
+/* Search highlight */
+mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:0 1px;}
+
+/* Bottom tab bar */
+.tab-bar{display:none;position:fixed;bottom:0;left:0;right:0;height:58px;
+         background:var(--surf);border-top:1px solid var(--border);z-index:300;
+         flex-direction:row;align-items:stretch;}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;
+          justify-content:center;gap:3px;font-size:10px;font-weight:600;
+          color:var(--dim);cursor:pointer;transition:color .15s;-webkit-tap-highlight-color:transparent;}
+.tab-item.active{color:var(--ac);}
+.tab-item svg{width:19px;height:19px;}
+
+/* Mobile panel overlay */
+.mobile-panel{display:none;position:fixed;inset:0;top:54px;bottom:58px;
+              background:var(--surf);z-index:200;overflow-y:auto;padding:1rem;}
+.mobile-panel.show{display:block;}
+.mobile-panel-sec{margin-bottom:1.25rem;}
+.mobile-panel-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+                    color:var(--dim);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+
 /* MOBILE */
 @media(max-width:600px){
   .modal-overlay{align-items:flex-end;padding:0;}
   .modal{border-radius:18px 18px 0 0;max-height:85dvh;padding:1.5rem 1.25rem 2.5rem;}
-}
-@media(max-width:600px){
   aside{display:none;}
   .search-bar{max-width:none;flex:1;}
   .logo-name{display:none;}
   .me-pill{display:none;}
-  .team-btn{display:flex;}
+  .team-btn{display:none;}
   .online-avatars,.online-count{display:none;}
   .hdr-btn .btn-text{display:none;}
   .hdr-btn{padding:6px 9px;}
-  .feed-scroll{padding:.75rem;}
+  .feed-scroll{padding:.75rem .75rem calc(.75rem + 58px);}
   .action-toolbar{padding:6px .75rem 0;gap:5px;}
   .tool-btn{padding:6px 9px;font-size:12px;}
-  .text-row{padding:6px .75rem 10px;}
+  .text-row{padding:6px .75rem calc(10px + 58px);}
   .entry-actions{opacity:1;}
   .pane-actions{display:none;}
+  .tab-bar{display:flex;}
+  .input-area{padding-bottom:58px;}
 }
 </style>
 </head>
@@ -455,14 +481,6 @@ input[type=file]{display:none;}
   <aside>
     <div class="sidebar-scroll">
       <div class="sidebar-sec">
-        <div class="sidebar-label">Who's Here</div>
-        <div id="whoOnline"><div class="sidebar-empty">Connecting…</div></div>
-      </div>
-      <div class="sidebar-sec" id="dmSection" style="display:none">
-        <div class="sidebar-label">Direct Messages</div>
-        <div id="dmList"></div>
-      </div>
-      <div class="sidebar-sec">
         <div class="sidebar-label">
           Topics
           <button class="add-btn" onclick="showNewTopic()" title="New topic">+</button>
@@ -476,6 +494,14 @@ input[type=file]{display:none;}
           <span class="row-label">Action Items</span>
           <span class="row-count" id="actionCount"></span>
         </div>
+      </div>
+      <div class="sidebar-sec" id="dmSection" style="display:none">
+        <div class="sidebar-label">Direct Messages</div>
+        <div id="dmList"></div>
+      </div>
+      <div class="sidebar-sec">
+        <div class="sidebar-label">Who's Here</div>
+        <div id="whoOnline"><div class="sidebar-empty">Connecting…</div></div>
       </div>
     </div>
     <div class="sidebar-footer">
@@ -663,6 +689,44 @@ input[type=file]{display:none;}
   </div>
 </div>
 
+<!-- Mobile tab bar -->
+<div class="tab-bar" id="tabBar">
+  <div class="tab-item active" id="tab-notes" onclick="showMobileTab('notes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Notes
+  </div>
+  <div class="tab-item" id="tab-topics" onclick="showMobileTab('topics')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    Topics
+  </div>
+  <div class="tab-item" id="tab-team" onclick="showMobileTab('team')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Team
+  </div>
+  <div class="tab-item" id="tab-actions" onclick="showMobileTab('actions')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Actions
+  </div>
+</div>
+
+<!-- Mobile panels -->
+<div class="mobile-panel" id="mobileTopicsPanel">
+  <div class="mobile-panel-sec">
+    <div class="mobile-panel-label">Topics <button class="add-btn" onclick="showNewTopic()">+</button></div>
+    <div id="mobileTopicList"></div>
+  </div>
+</div>
+<div class="mobile-panel" id="mobileTeamPanel">
+  <div class="mobile-panel-sec">
+    <div class="mobile-panel-label">Who's Here</div>
+    <div id="mobileWhoList"></div>
+  </div>
+  <div class="mobile-panel-sec" id="mobileDmSec" style="display:none">
+    <div class="mobile-panel-label">Direct Messages</div>
+    <div id="mobileDmList"></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -787,6 +851,7 @@ function renderOnline(recent){
      </div>`).join('')||'<div class="sidebar-empty">Just you here</div>';
   document.getElementById('whoOnline').innerHTML=rows;
   document.getElementById('sheetWho').innerHTML=rows;
+  renderMobilePanels();
 }
 
 // ── TOPICS ───────────────────────────────────────────
@@ -980,6 +1045,12 @@ function showTyping(names){
 function stopTypingIndicator(){document.getElementById('typingStrip').classList.remove('show');}
 
 // ── SEARCH ───────────────────────────────────────────
+function highlightMatch(text,q){
+  if(!q)return parseMentions(text);
+  const safe=esc(text);
+  const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  return safe.replace(re,'<mark class="hl">$1</mark>');
+}
 function runSearch(q){
   const ql=q.toLowerCase();
   const feed=document.getElementById('feed');
@@ -987,13 +1058,17 @@ function runSearch(q){
   const bar=document.getElementById('searchResultsBar');
   const label=document.getElementById('searchResultsLabel');
   clearFeed();
-  // Search current topic entries
   const entries=Object.entries(allEntries[currentTopicId]||{}).filter(([,e])=>(e.text||'').toLowerCase().includes(ql));
   bar.classList.add('show');
   label.textContent=`${entries.length} result${entries.length!==1?'s':''} for "${q}"`;
   if(!entries.length){empty.style.display='flex';document.getElementById('feedEmptyMsg').textContent=`No notes matching "${q}"`;return;}
   empty.style.display='none';
-  entries.sort((a,b)=>(a[1].ts||0)-(b[1].ts||0)).forEach(([id,e])=>feed.appendChild(buildEntry(id,e)));
+  entries.sort((a,b)=>(a[1].ts||0)-(b[1].ts||0)).forEach(([id,e])=>{
+    const el=buildEntry(id,e);
+    const t=el.querySelector('.entry-text');
+    if(t)t.innerHTML=highlightMatch(e.text||'',ql);
+    feed.appendChild(el);
+  });
 }
 function clearSearch(){
   searchQuery='';document.getElementById('searchInput').value='';
@@ -1287,7 +1362,48 @@ function copyLink(){
 }
 function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:-9999px;opacity:0';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');cb();}catch(_){toast('Copy the link manually',false);}document.body.removeChild(ta);}
 
-// ── MOBILE ───────────────────────────────────────────
+// ── MOBILE TABS ───────────────────────────────────────
+let mobileTab='notes';
+function showMobileTab(tab){
+  mobileTab=tab;
+  ['notes','topics','team','actions'].forEach(t=>{
+    document.getElementById('tab-'+t)?.classList.toggle('active',t===tab);
+  });
+  document.getElementById('mobileTopicsPanel')?.classList.toggle('show',tab==='topics');
+  document.getElementById('mobileTeamPanel')?.classList.toggle('show',tab==='team');
+  document.getElementById('tabBar')?.classList.toggle('show',true);
+  if(tab==='actions'){switchToActionItems();mobileTab='actions';}
+  if(tab==='notes'){
+    // make sure feed is visible
+    document.getElementById('feed').style.display='';
+    document.getElementById('actionItemsRow')?.classList.remove('action-active');
+  }
+  renderMobilePanels();
+}
+function renderMobilePanels(){
+  // Topics panel
+  const mtl=document.getElementById('mobileTopicList');
+  if(mtl){
+    const sorted=Object.entries(allTopics).sort((a,b)=>{if(a[0]==='general')return -1;if(b[0]==='general')return 1;return(a[1].ts||0)-(b[1].ts||0);});
+    mtl.innerHTML=sorted.map(([id,t])=>`
+      <div class="nav-row${currentView==='topic'&&id===currentTopicId?' active':''}" onclick="switchTopic('${esc(id)}');showMobileTab('notes')">
+        <span class="row-icon">#</span>
+        <span class="row-label">${esc(t.title||id)}</span>
+        ${isUnread(id)?'<div class="row-badge-dot"></div>':''}
+      </div>`).join('');
+  }
+  // Team panel
+  const mwl=document.getElementById('mobileWhoList');
+  if(mwl){
+    const rows=Object.entries(allUsers).map(([id,u])=>
+      `<div class="who-row"${id!==myId?` onclick="openDm('${esc(id)}','${esc(u.name)}','${esc(u.initials)}','${esc(u.color)}');showMobileTab('notes')"`:''}>
+         <div class="who-badge" style="background:${u.color}">${esc(u.initials)}</div>
+         <span class="who-name">${esc(u.name)}${id===myId?'<span class="who-you" style="margin-left:4px">you</span>':''}</span>
+         ${id!==myId?'<span class="dm-hint">DM →</span>':''}
+       </div>`).join('')||'<div class="sidebar-empty">Just you here</div>';
+    mwl.innerHTML=rows;
+  }
+}
 function openSheet(){renderTopicList();document.getElementById('sheetOverlay').classList.add('show');document.getElementById('bottomSheet').classList.add('show');}
 function closeSheet(){document.getElementById('sheetOverlay').classList.remove('show');document.getElementById('bottomSheet').classList.remove('show');}
 
