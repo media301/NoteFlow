@@ -45,8 +45,8 @@
   --purple:#7B8CFF;--purplebg:rgba(123,140,255,.10);
 }
 [data-theme="light"]{
-  --bg:#E9E9F2;--surf:#F2F2F9;--card:#EAEAF3;--card2:#E1E1EC;
-  --border:#D2D2E2;--brd2:#BEBECE;--text:#0D0D18;--dim:#8888A0;
+  --bg:#D4D4E2;--surf:#E0E0EC;--card:#D8D8E6;--card2:#CECEDE;
+  --border:#BEBECE;--brd2:#ACACBE;--text:#0D0D18;--dim:#707090;
   --dim2:#666680;--acbg:rgba(31,214,156,.10);--acglow:rgba(31,214,156,.20);
   --redbg:rgba(240,96,90,.08);--amberbg:rgba(245,163,66,.08);--purplebg:rgba(123,140,255,.08);
 }
@@ -654,7 +654,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <span id="typingLabel"></span>
     </div>
 
-    <div class="input-area">
+    <div class="input-area" id="inputArea">
       <div class="attach-preview" id="attachPreview">
         <img id="attachThumb" src="" alt="">
         <span id="attachName"></span>
@@ -1223,6 +1223,7 @@ function switchTopic(topicId){
   const title=(allTopics[topicId]&&allTopics[topicId].title)||topicId;
   document.getElementById('paneTitle').innerHTML=`<span class="pane-hash">#</span><span class="pane-label">${esc(title)}</span>`;
   document.getElementById('noteInput').placeholder='Type a note and press Enter…';
+  document.getElementById('inputArea').style.display='';
   document.getElementById('actionToolbar').style.display='';
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
@@ -1288,6 +1289,7 @@ function openDm(userId,name,initials,color,existingKey){
     `<div class="pane-dm-badge" style="background:${color}">${esc(initials)}</div>
      <div><div class="pane-label">${esc(name)}</div><div class="pane-sub">Direct message</div></div>`;
   document.getElementById('noteInput').placeholder=`Message ${name}…`;
+  document.getElementById('inputArea').style.display='';
   document.getElementById('actionToolbar').style.display='';
   document.getElementById('actionBtn').style.display='none';
   document.getElementById('actionItemsRow')?.classList.remove('action-active');
@@ -1372,6 +1374,7 @@ function switchToActionItems(){
   document.getElementById('actionToolbar').style.display='none';
   document.getElementById('actionItemsRow').classList.add('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
+  document.getElementById('inputArea').style.display='none';
   clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading action items…';
   forceIosRepaint();renderTopicList();closeSheet();
   if(!window._fb){renderActionItems({});return;}
@@ -1975,6 +1978,7 @@ function switchGroup(groupId){
     `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
   const isGroupAdmin=g.creatorId===myId||g.createdBy===myName||(!g.creatorId&&!g.passphrase);
   document.getElementById('groupMembersBtn').classList.toggle('grp-active',isGroupAdmin||!!g.passphrase);
+  document.getElementById('inputArea').style.display='';
   document.getElementById('actionToolbar').style.display='flex';
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
@@ -2338,6 +2342,7 @@ function switchToFiles(){
   document.getElementById('groupMembersBtn').classList.remove('grp-active');
   document.getElementById('actionItemsRow').classList.remove('action-active');
   document.getElementById('filesRow').classList.add('action-active');
+  document.getElementById('inputArea').style.display='none';
   clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading files…';forceIosRepaint();renderTopicList();closeSheet();
   if(!window._fb){renderFiles([]);return;}
   const{db,ref,get}=window._fb;
