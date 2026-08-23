@@ -1101,7 +1101,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.1';
+  const _ver='v1.2';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
 }
 function initPWAIcons(){
@@ -1396,7 +1396,9 @@ function openDm(userId,name,initials,color,existingKey){
     onValue(ref(db,'dms/'+key+'/entries'),snap=>{
       if(currentView!=='dm'||currentDmWith?.userId!==userId)return;
       localStorage.setItem('seen_dm_'+key,Date.now());
-      window._lastFeedData={data:snap.val()||{},isDm:true};
+      window._dmDataCache=window._dmDataCache||{};
+      window._dmDataCache[key]=snap.val()||{};
+      window._lastFeedData={data:window._dmDataCache[key],isDm:true};
       renderFeed(window._lastFeedData.data,true);
     });
   }
@@ -2380,11 +2382,18 @@ function showMobileTab(tab){
     } else if(currentView==='dm'&&currentDmWith){
       const _k=currentDmWith.key;
       clearFeed();
-      const _e=allDmsData[_k]?.entries;
-      if(_e&&Object.keys(_e).length)renderFeed(_e,true);
-      if('ontouchstart' in window){
-        const ep=document.querySelector('.editor-pane');
-        if(ep){ep.style.opacity='0.999';requestAnimationFrame(()=>{ep.style.opacity='';});}
+      const panel=document.getElementById('mobileTeamPanel');
+      if('ontouchstart' in window&&panel){
+        const onEnd=e=>{
+          if(e.propertyName!=='opacity')return;
+          panel.removeEventListener('transitionend',onEnd);
+          const _e=(window._dmDataCache||{})[_k]||allDmsData[_k]?.entries;
+          if(_e&&Object.keys(_e).length)renderFeed(_e,true);
+        };
+        panel.addEventListener('transitionend',onEnd);
+      } else {
+        const _e=allDmsData[_k]?.entries;
+        if(_e&&Object.keys(_e).length)renderFeed(_e,true);
       }
     } else if(currentView==='doc'&&currentDocId){
       // stay in current doc view — editor already live
