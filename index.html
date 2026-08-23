@@ -1221,6 +1221,7 @@ function switchTopic(topicId){
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
+  document.getElementById('feedEmptyMsg').textContent='Hi! I\'m Clippy. Add a note below, tap the mic to dictate, or click a teammate to message them privately.';
   clearFeed();cancelReply();cancelActionTag();
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
@@ -1285,6 +1286,7 @@ function openDm(userId,name,initials,color,existingKey){
   document.getElementById('actionBtn').style.display='none';
   document.getElementById('actionItemsRow')?.classList.remove('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
+  document.getElementById('feedEmptyMsg').textContent=`Send ${name} a message to start the conversation.`;
   clearFeed();cancelReply();cancelActionTag();
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
@@ -1622,6 +1624,7 @@ function renderFeed(data,isDm=false){
   hideFeedEmpty(empty);
   const entries=Object.entries(data).sort((a,b)=>(a[1].ts||0)-(b[1].ts||0));
   const existing=new Set([...feed.querySelectorAll('.note-entry')].map(el=>el.dataset.id));
+  const wasEmpty=existing.size===0;
   entries.forEach(([id,e])=>{
     if(existing.has(id)){
       const el=feed.querySelector(`.note-entry[data-id="${id}"]`);
@@ -1636,6 +1639,7 @@ function renderFeed(data,isDm=false){
   });
   const fw=document.getElementById('feed');setTimeout(()=>{if(fw)fw.scrollTop=fw.scrollHeight;},50);
   markSeen(currentTopicId);
+  if(wasEmpty)forceIosRepaint();
 }
 function parseMentions(text){
   let h=esc(text);
@@ -1944,6 +1948,7 @@ function switchGroup(groupId){
   document.getElementById('actionItemsRow').classList.remove('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
   renderGroupList();renderTopicList();renderDmList(allDmsData);
+  document.getElementById('feedEmptyMsg').textContent='No messages yet. Start the group conversation!';
   clearFeed();
   if(window._fb){
     const{db,ref,onValue}=window._fb;
@@ -2218,6 +2223,13 @@ function copyLink(){
 function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:-9999px;opacity:0';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');cb();}catch(_){toast('Copy the link manually',false);}document.body.removeChild(ta);}
 
 // ── MOBILE TABS ───────────────────────────────────────
+function forceIosRepaint(){
+  const ep=document.querySelector('.editor-pane');
+  if(!ep)return;
+  void ep.offsetHeight;
+  ep.style.webkitTransform='translateZ(0)';
+  requestAnimationFrame(()=>{ep.style.webkitTransform='';});
+}
 let mobileTab='notes';
 function showMobileTab(tab){
   mobileTab=tab;
@@ -2239,6 +2251,7 @@ function showMobileTab(tab){
       // stay in current doc view — editor already live
     } else {
       switchTopic(currentTopicId);
+      forceIosRepaint();
     }
   }
   if(tab==='team'){renderTeam();renderMobileDms();}
