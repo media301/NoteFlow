@@ -999,6 +999,7 @@ let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,ass
 let currentView='topic',currentTopicId='general',currentDmWith=null,currentGroupId=null,currentDocId=null;
 let allTopics={},allUsers={},allEntries={},allProfiles={},allGroups={},allDmsData={},allDocs={};
 let myGroupIds=new Set();
+let actionFilterUserId=null;
 let docSaveTimer=null,docTypingTimer=null;
 let typingTimer=null,searchQuery='',isDark=true;
 
@@ -1110,7 +1111,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.9';
+  const _ver='v2.1';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1486,6 +1487,7 @@ function switchToActionItems(){
   document.getElementById('actionItemsRow').classList.add('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
   document.getElementById('inputArea').style.display='none';
+  actionFilterUserId=null;
   clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading action items…';
   forceIosRepaint();renderTopicList();closeSheet();
   if(!window._fb){renderActionItems({});return;}
@@ -1505,6 +1507,7 @@ function switchToActionItems(){
 }
 function renderActionItems(topicEntries,groupEntries){
   if(currentView!=='actions')return;
+  window._lastActionData={topicEntries,groupEntries};
   const feed=document.getElementById('feed');
   const empty=document.getElementById('feedEmpty');
   const emptyMsg=document.getElementById('feedEmptyMsg');
@@ -1520,11 +1523,33 @@ function renderActionItems(topicEntries,groupEntries){
     });
   }
   items.sort((a,b)=>(b.e.ts||0)-(a.e.ts||0));
+  const getAssignees=e=>e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];
+  // Filter bar
+  const profiles=Object.entries(allProfiles).filter(([id])=>id!==myId);
+  if(profiles.length){
+    const bar=document.createElement('div');
+    bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 10px;align-items:center;';
+    const allChip=document.createElement('div');
+    allChip.style.cssText=`font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;cursor:pointer;border:1.5px solid ${!actionFilterUserId?'var(--ac)':'var(--border)'};color:${!actionFilterUserId?'var(--ac)':'var(--dim)'};`;
+    allChip.textContent='All';
+    allChip.onclick=()=>{actionFilterUserId=null;renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});};
+    bar.appendChild(allChip);
+    profiles.forEach(([id,p])=>{
+      const chip=document.createElement('div');
+      const active=actionFilterUserId===id;
+      chip.style.cssText=`display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px 3px 4px;border-radius:20px;cursor:pointer;border:1.5px solid ${active?p.color:'var(--border)'};color:${active?p.color:'var(--dim2)'};`;
+      chip.innerHTML=`<div style="background:${p.color};width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000">${esc(p.initials)}</div>${esc(p.name.split(' ')[0])}`;
+      chip.onclick=()=>{actionFilterUserId=active?null:id;renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});};
+      bar.appendChild(chip);
+    });
+    feed.appendChild(bar);
+  }
+  // Apply filter
+  const filtered=actionFilterUserId?items.filter(({e})=>getAssignees(e).some(u=>u.id===actionFilterUserId)):items;
   if(!items.length){empty.classList.remove('fading');empty.style.display='flex';emptyMsg.textContent='No action items yet. Tag a note with ✅ Action Item to track it here.';return;}
   hideFeedEmpty(empty);
-  const getAssignees=e=>e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];
-  const incomplete=items.filter(({e})=>!e.completed);
-  const done=items.filter(({e})=>e.completed);
+  const incomplete=filtered.filter(({e})=>!e.completed);
+  const done=filtered.filter(({e})=>e.completed);
   const assignedToMe=incomplete.filter(({e})=>getAssignees(e).some(u=>u.id===myId));
   const mine=incomplete.filter(({e})=>e.authorId===myId&&!getAssignees(e).some(u=>u.id===myId));
   const others=incomplete.filter(({e})=>e.authorId!==myId&&!getAssignees(e).some(u=>u.id===myId));
@@ -1928,7 +1953,11 @@ function toggleComplete(entryDiv,entryId,e){
   const{db,ref,set}=window._fb;
   const basePath=entryDiv.dataset.basePath||currentBasePath();
   const isComplete=!e.completed;
-  set(ref(db,basePath+'/entries/'+entryId),{...e,completed:isComplete,completedBy:isComplete?{id:myId,name:myName}:null,completedAt:isComplete?Date.now():null});
+  const updatedE={...e,completed:isComplete,completedBy:isComplete?{id:myId,name:myName}:null,completedAt:isComplete?Date.now():null};
+  const newEl=buildEntry(entryId,updatedE,currentView==='dm');
+  if(entryDiv.dataset.basePath)newEl.dataset.basePath=entryDiv.dataset.basePath;
+  entryDiv.replaceWith(newEl);
+  set(ref(db,basePath+'/entries/'+entryId),updatedE);
 }
 
 function showActionPopover(entryDiv,entryId,e){
