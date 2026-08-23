@@ -378,8 +378,8 @@ input[type=file]{display:none;}
 mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:0 1px;}
 
 /* Bottom tab bar */
-.tab-bar{display:none;position:fixed;bottom:0;left:0;right:0;height:58px;
-         background:var(--surf);border-top:1px solid var(--border);z-index:300;
+.tab-bar{display:none;height:58px;flex-shrink:0;
+         background:var(--surf);border-top:1px solid var(--border);
          flex-direction:row;align-items:stretch;}
 .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;
           justify-content:center;gap:3px;font-size:10px;font-weight:600;
@@ -414,7 +414,6 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   .entry-actions{opacity:1;}
   .pane-actions{display:none;}
   .tab-bar{display:flex;}
-  .editor-pane{padding-bottom:58px;}
 }
 </style>
 </head>
@@ -576,7 +575,14 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       </div>
       <div class="action-toggle-bar" id="actionBar">
         <span style="font-size:14px">✅</span>
-        <span class="action-toggle-label">Marking as Action Item</span>
+        <span class="action-toggle-label">Action Item</span>
+        <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end">
+          <span style="font-size:11px;color:var(--amber)">Assign to:</span>
+          <select id="assignSelect" style="background:var(--card2);border:1px solid rgba(245,163,66,.4);
+                  color:var(--text);border-radius:6px;padding:3px 7px;font-size:12px;font-family:inherit;outline:none;">
+            <option value="">Nobody</option>
+          </select>
+        </div>
         <button class="action-x" onclick="cancelActionTag()">×</button>
       </div>
       <div class="action-toolbar" id="actionToolbar">
@@ -727,6 +733,11 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   </div>
 </div>
 
+<!-- @mention picker -->
+<div id="mentionPicker" style="display:none;position:fixed;background:var(--card2);border:1px solid var(--brd2);
+     border-radius:10px;padding:5px;flex-direction:column;gap:2px;z-index:600;
+     box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:160px;max-height:200px;overflow-y:auto;"></div>
+
 <div id="toast"></div>
 
 <script>
@@ -735,7 +746,7 @@ const EMOJIS=['👍','❤️','😂','🎉','💡'];
 let myName='',myInitials='',myColor='',myId='';
 let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false;
 let currentView='topic',currentTopicId='general',currentDmWith=null;
-let allTopics={},allUsers={},allEntries={};
+let allTopics={},allUsers={},allEntries={},allProfiles={};
 let typingTimer=null,searchQuery='',isDark=true;
 
 // Textarea
@@ -745,7 +756,12 @@ noteInput.addEventListener('input',()=>{
   noteInput.style.height=Math.min(noteInput.scrollHeight,90)+'px';
   pushTyping();
 });
-noteInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendNote();}});
+noteInput.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(mentionPicker.style.display==='flex')return;sendNote();}
+  if(e.key==='Escape')hideMentionPicker();
+  if(e.key==='ArrowDown'&&mentionPicker.style.display==='flex'){e.preventDefault();focusMentionItem(1);}
+  if(e.key==='ArrowUp'&&mentionPicker.style.display==='flex'){e.preventDefault();focusMentionItem(-1);}
+});
 
 // Search
 document.getElementById('searchInput').addEventListener('input',e=>{
@@ -819,6 +835,13 @@ function initFirebase(){
     const ping=()=>set(presRef,{name:myName,initials:myInitials,color:myColor,ts:Date.now()});
     ping();setInterval(ping,15000);
 
+    onValue(ref(db,'profiles'),snap=>{
+      const data=snap.val()||{};
+      // Build allProfiles keyed by userId
+      allProfiles={};
+      Object.values(data).forEach(p=>{if(p&&p.id&&p.name&&p.name!=='undefined')allProfiles[p.id]=p;});
+      renderTeam();
+    });
     onValue(ref(db,'presence'),snap=>{
       const users=snap.val()||{};
       const recent=Object.entries(users).filter(([,u])=>Date.now()-u.ts<35000&&u.name&&u.name!=='undefined'&&u.initials&&u.initials!=='undefined');
@@ -832,11 +855,31 @@ function initFirebase(){
       renderTopicList();
     });
     onValue(ref(db,'dms'),snap=>{renderDmList(snap.val()||{});});
+    listenMentions();
     switchTopic('general');
   },200);
 }
 
 // ── ONLINE ───────────────────────────────────────────
+function renderTeam(){
+  // All known users from profiles, with online dot for active ones
+  const teamRows=Object.entries(allProfiles).map(([id,p])=>{
+    const isOnline=!!allUsers[id];
+    const isMe=id===myId;
+    return `<div class="who-row"${!isMe?` onclick="openDm('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}');showMobileTab('notes')"`:''}>
+      <div style="position:relative;flex-shrink:0">
+        <div class="who-badge" style="background:${p.color}">${esc(p.initials)}</div>
+        ${isOnline?`<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;background:#1FD69C;border:1.5px solid var(--surf)"></div>`:''}
+      </div>
+      <span class="who-name">${esc(p.name)}${isMe?' <span class="who-you">you</span>':''}</span>
+      ${!isMe?`<span class="dm-hint">${isOnline?'online':'offline'}</span>`:''}
+    </div>`;
+  }).join('')||'<div class="sidebar-empty">Just you here</div>';
+  const mwl=document.getElementById('mobileWhoList');if(mwl)mwl.innerHTML=teamRows;
+  const sw=document.getElementById('sheetWho');if(sw)sw.innerHTML=teamRows;
+  // Also update sidebar who's here with just online
+  renderOnline(Object.entries(allUsers));
+}
 function renderOnline(recent){
   const avatars=document.getElementById('onlineAvatars');
   const count=document.getElementById('onlineCount');
@@ -850,8 +893,7 @@ function renderOnline(recent){
        ${id!==myId?'<span class="dm-hint">DM</span>':''}
      </div>`).join('')||'<div class="sidebar-empty">Just you here</div>';
   document.getElementById('whoOnline').innerHTML=rows;
-  document.getElementById('sheetWho').innerHTML=rows;
-  renderMobilePanels();
+  renderTeam();
 }
 
 // ── TOPICS ───────────────────────────────────────────
@@ -885,6 +927,7 @@ function markSeen(topicId){localStorage.setItem('seen_'+topicId,Date.now());}
 function switchTopic(topicId){
   currentView='topic';currentTopicId=topicId;currentDmWith=null;
   markSeen(topicId);
+  clearMentionsForTopic(topicId);
   stopTypingIndicator();
   const title=(allTopics[topicId]&&allTopics[topicId].title)||topicId;
   document.getElementById('paneTitle').innerHTML=`<span class="pane-hash">#</span><span class="pane-label">${esc(title)}</span>`;
@@ -996,12 +1039,24 @@ function switchToActionItems(){
   const emptyMsg=document.getElementById('feedEmptyMsg');
   if(!items.length){empty.style.display='flex';emptyMsg.textContent='No action items yet. Tag a note with ✅ Action Item to track it here.';return;}
   empty.style.display='none';
-  items.forEach(({id,e,topicId})=>{
-    const div=buildEntry(id,e,false);
-    div.style.borderLeft='3px solid var(--amber)';
-    div.style.paddingLeft='6px';
-    feed.appendChild(div);
-  });
+  // Show "Assigned to Me" first
+  const assignedToMe=items.filter(({e})=>e.assignedTo&&e.assignedTo.id===myId);
+  const mine=items.filter(({e})=>e.authorId===myId&&!(e.assignedTo&&e.assignedTo.id===myId));
+  const others=items.filter(({e})=>e.authorId!==myId&&!(e.assignedTo&&e.assignedTo.id===myId));
+  const addSection=(label,color,list)=>{
+    if(!list.length)return;
+    const hdr=document.createElement('div');
+    hdr.style.cssText=`font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${color};padding:4px 2px 6px;`;
+    hdr.textContent=label;feed.appendChild(hdr);
+    list.forEach(({id,e})=>{
+      const div=buildEntry(id,e,false);
+      div.style.borderLeft=`3px solid ${color}`;div.style.paddingLeft='6px';
+      feed.appendChild(div);
+    });
+  };
+  addSection('Assigned to Me','#F0605A',assignedToMe);
+  addSection('My Action Items','var(--amber)',mine);
+  addSection('Team Action Items','var(--dim)',others);
   renderTopicList();closeSheet();
 }
 function updateActionCount(){
@@ -1023,6 +1078,108 @@ function renderPinned(data){
        <span>${esc((e.text||'').slice(0,80))}</span>
      </div>`
   ).join('');
+}
+
+// ── @MENTIONS ────────────────────────────────────────
+const mentionPicker=document.getElementById('mentionPicker');
+let mentionQuery='',mentionStart=-1,mentionFocusIdx=-1;
+
+noteInput.addEventListener('input',()=>{
+  const val=noteInput.value,pos=noteInput.selectionStart;
+  const before=val.slice(0,pos);
+  const match=before.match(/@(\w*)$/);
+  if(match){
+    mentionQuery=match[1].toLowerCase();mentionStart=pos-match[0].length;
+    const matches=Object.values(allProfiles).filter(p=>p.name.toLowerCase().includes(mentionQuery)&&p.id!==myId);
+    if(matches.length){showMentionPicker(matches);return;}
+  }
+  hideMentionPicker();
+});
+
+function showMentionPicker(matches){
+  mentionPicker.innerHTML='';mentionFocusIdx=-1;
+  matches.slice(0,6).forEach((p,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .1s;';
+    row.innerHTML=`<div style="width:22px;height:22px;border-radius:50%;background:${p.color};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;flex-shrink:0">${esc(p.initials)}</div><span style="font-size:13px;font-weight:500">${esc(p.name)}</span>`;
+    row.addEventListener('mouseenter',()=>{mentionFocusIdx=i;highlightMentionItem();});
+    row.addEventListener('click',()=>insertMention(p.name));
+    mentionPicker.appendChild(row);
+  });
+  mentionPicker.style.display='flex';
+  const rect=noteInput.getBoundingClientRect();
+  mentionPicker.style.left=Math.min(rect.left+8,window.innerWidth-200)+'px';
+  mentionPicker.style.bottom=(window.innerHeight-rect.top+6)+'px';
+  mentionPicker.style.top='auto';
+}
+function hideMentionPicker(){mentionPicker.style.display='none';mentionFocusIdx=-1;}
+function focusMentionItem(dir){
+  const items=mentionPicker.children;
+  mentionFocusIdx=Math.max(0,Math.min(items.length-1,mentionFocusIdx+dir));
+  highlightMentionItem();
+  if(mentionPicker.style.display==='flex'&&(window.event?.key==='Enter'||false)){
+    const p=Object.values(allProfiles).filter(p=>p.id!==myId)[mentionFocusIdx];
+    if(p)insertMention(p.name);
+  }
+}
+function highlightMentionItem(){
+  [...mentionPicker.children].forEach((el,i)=>{el.style.background=i===mentionFocusIdx?'var(--brd2)':'';});
+}
+function insertMention(name){
+  const val=noteInput.value,pos=noteInput.selectionStart;
+  const before=val.slice(0,mentionStart);
+  const after=val.slice(pos);
+  noteInput.value=before+'@'+name+' '+after;
+  const newPos=mentionStart+name.length+2;
+  noteInput.setSelectionRange(newPos,newPos);
+  hideMentionPicker();noteInput.focus();
+}
+document.addEventListener('click',e=>{if(!mentionPicker.contains(e.target)&&e.target!==noteInput)hideMentionPicker();});
+
+// Extract @mentioned user IDs from text
+function extractMentions(text){
+  const names=[];const re=/@([\w ]+?)(?=\s|$|[^a-zA-Z\s])/g;let m;
+  while((m=re.exec(text))!==null)names.push(m[1].trim());
+  return Object.values(allProfiles).filter(p=>names.some(n=>p.name.toLowerCase()===n.toLowerCase())&&p.id!==myId).map(p=>p.id);
+}
+
+// Send mention notifications
+function sendMentionNotifications(text,entryId,topicId){
+  if(!window._fb)return;
+  const{db,ref,set}=window._fb;
+  const ids=extractMentions(text);
+  ids.forEach(uid=>{
+    set(ref(db,'mentions/'+uid+'/'+entryId),{from:myName,text:text.slice(0,80),topicId,ts:Date.now(),read:false});
+  });
+}
+
+// Listen for mentions of me
+function listenMentions(){
+  if(!window._fb||!myId)return;
+  const{db,ref,onValue}=window._fb;
+  onValue(ref(db,'mentions/'+myId),snap=>{
+    const data=snap.val()||{};
+    const unread=Object.values(data).filter(m=>!m.read).length;
+    updateMentionBadge(unread);
+  });
+}
+function updateMentionBadge(count){
+  const tab=document.getElementById('tab-notes');if(!tab)return;
+  let badge=tab.querySelector('.mention-badge');
+  if(!badge){badge=document.createElement('div');badge.className='mention-badge';
+    badge.style.cssText='position:absolute;top:4px;right:14px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;';
+    tab.style.position='relative';tab.appendChild(badge);}
+  if(count>0){badge.textContent=count;badge.style.display='flex';}else{badge.style.display='none';}
+}
+function clearMentionsForTopic(topicId){
+  if(!window._fb||!myId)return;
+  const{db,ref,get,set}=window._fb;
+  get(ref(db,'mentions/'+myId)).then(snap=>{
+    const data=snap.val()||{};
+    Object.entries(data).filter(([,m])=>m.topicId===topicId&&!m.read).forEach(([id])=>{
+      set(ref(db,'mentions/'+myId+'/'+id+'/read'),true);
+    });
+  });
 }
 
 // ── TYPING ───────────────────────────────────────────
@@ -1133,6 +1290,7 @@ function buildEntry(id,e,isDm){
         <span class="entry-name" style="color:${e.color||'#888'}">${esc(name)}</span>
         <span class="entry-time">${time}${e.edited?' · edited':''}</span>
         ${e.isAction?'<span class="action-badge">✅ Action</span>':''}
+        ${e.assignedTo?`<span style="font-size:10px;background:var(--redbg);color:var(--red);border-radius:4px;padding:1px 6px;font-weight:700">→ ${esc(e.assignedTo.name)}</span>`:''}
         ${e.pinned?'<span class="pin-badge">📌</span>':''}
         <div class="entry-actions">
           ${!isDm?`<button class="entry-act-btn reply-btn">↩ Reply</button>`:''}
@@ -1229,10 +1387,19 @@ function setReply(id,e){
 function cancelReply(){replyingTo=null;document.getElementById('replyBanner').classList.remove('show');}
 
 // ── ACTION TAG ────────────────────────────────────────
+function populateAssignSelect(){
+  const sel=document.getElementById('assignSelect');
+  if(!sel)return;
+  sel.innerHTML='<option value="">Nobody</option>';
+  Object.entries(allProfiles).filter(([id])=>id!==myId).forEach(([id,p])=>{
+    const opt=document.createElement('option');opt.value=id;opt.textContent=p.name;sel.appendChild(opt);
+  });
+}
 function toggleActionTag(){
   isActionTag=!isActionTag;
   document.getElementById('actionBtn').classList.toggle('action-on',isActionTag);
   document.getElementById('actionBar').classList.toggle('show',isActionTag);
+  if(isActionTag)populateAssignSelect();
 }
 function cancelActionTag(){isActionTag=false;document.getElementById('actionBtn').classList.remove('action-on');document.getElementById('actionBar').classList.remove('show');}
 
@@ -1263,13 +1430,25 @@ function sendNote(){
   const text=noteInput.value.trim();if(!text)return;
   const entry={type:'text',text,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()};
   if(replyingTo){entry.replyTo={name:replyingTo.name,text:replyingTo.text.slice(0,120),color:replyingTo.color};cancelReply();}
-  if(isActionTag){entry.isAction=true;cancelActionTag();}
-  if(currentView==='dm'&&currentDmWith){pushDm(entry);}else{pushEntry(entry);}
-  noteInput.value='';noteInput.style.height='auto';
+  if(isActionTag){
+    entry.isAction=true;
+    const sel=document.getElementById('assignSelect');
+    const assignId=sel&&sel.value;
+    if(assignId&&allProfiles[assignId]){
+      const p=allProfiles[assignId];
+      entry.assignedTo={id:assignId,name:p.name,initials:p.initials,color:p.color};
+    }
+    cancelActionTag();
+  }
+  if(currentView==='dm'&&currentDmWith){pushDm(entry);}
+  else{
+    pushEntry(entry).then(ref=>{if(ref&&text)sendMentionNotifications(text,ref.key,currentTopicId);}).catch(()=>{});
+  }
+  noteInput.value='';noteInput.style.height='auto';hideMentionPicker();
   // Clear typing
   if(window._fb&&currentView==='topic'){const{db,ref,remove}=window._fb;remove(ref(db,'typing/'+currentTopicId+'/'+myId));}
 }
-function pushEntry(entry){if(!window._fb)return;const{db,ref,push}=window._fb;push(ref(db,'topics/'+currentTopicId+'/entries'),entry);}
+function pushEntry(entry){if(!window._fb)return Promise.resolve(null);const{db,ref,push}=window._fb;return push(ref(db,'topics/'+currentTopicId+'/entries'),entry);}
 function pushDm(entry){if(!window._fb||!currentDmWith)return;const{db,ref,push}=window._fb;push(ref(db,'dms/'+dmKey(myId,currentDmWith.userId)+'/entries'),entry);}
 
 // ── FILES ─────────────────────────────────────────────
@@ -1374,9 +1553,8 @@ function showMobileTab(tab){
   document.getElementById('tabBar')?.classList.toggle('show',true);
   if(tab==='actions'){switchToActionItems();mobileTab='actions';}
   if(tab==='notes'){
-    // make sure feed is visible
-    document.getElementById('feed').style.display='';
     document.getElementById('actionItemsRow')?.classList.remove('action-active');
+    if(currentView==='actions')switchTopic(currentTopicId);
   }
   renderMobilePanels();
 }
@@ -1391,17 +1569,6 @@ function renderMobilePanels(){
         <span class="row-label">${esc(t.title||id)}</span>
         ${isUnread(id)?'<div class="row-badge-dot"></div>':''}
       </div>`).join('');
-  }
-  // Team panel
-  const mwl=document.getElementById('mobileWhoList');
-  if(mwl){
-    const rows=Object.entries(allUsers).map(([id,u])=>
-      `<div class="who-row"${id!==myId?` onclick="openDm('${esc(id)}','${esc(u.name)}','${esc(u.initials)}','${esc(u.color)}');showMobileTab('notes')"`:''}>
-         <div class="who-badge" style="background:${u.color}">${esc(u.initials)}</div>
-         <span class="who-name">${esc(u.name)}${id===myId?'<span class="who-you" style="margin-left:4px">you</span>':''}</span>
-         ${id!==myId?'<span class="dm-hint">DM →</span>':''}
-       </div>`).join('')||'<div class="sidebar-empty">Just you here</div>';
-    mwl.innerHTML=rows;
   }
 }
 function openSheet(){renderTopicList();document.getElementById('sheetOverlay').classList.add('show');document.getElementById('bottomSheet').classList.add('show');}
