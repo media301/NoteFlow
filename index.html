@@ -426,8 +426,8 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 /* Mobile panel overlay */
 .mobile-panel{display:block;position:fixed;inset:0;top:54px;bottom:58px;
               background:var(--surf);z-index:200;overflow-y:auto;padding:1rem;
-              visibility:hidden;pointer-events:none;}
-.mobile-panel.show{visibility:visible;pointer-events:auto;}
+              opacity:0;pointer-events:none;transition:opacity .15s;}
+.mobile-panel.show{opacity:1;pointer-events:auto;}
 .mobile-panel-sec{margin-bottom:1.25rem;}
 .mobile-panel-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
                     color:var(--dim);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
@@ -1101,7 +1101,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.0';
+  const _ver='v1.1';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
 }
 function initPWAIcons(){
