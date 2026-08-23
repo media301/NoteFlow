@@ -45,8 +45,8 @@
   --purple:#7B8CFF;--purplebg:rgba(123,140,255,.10);
 }
 [data-theme="light"]{
-  --bg:#F2F2F7;--surf:#FFFFFF;--card:#F8F8FC;--card2:#ECECF4;
-  --border:#DDDDE8;--brd2:#C8C8D8;--text:#0D0D18;--dim:#8888A0;
+  --bg:#E9E9F2;--surf:#F2F2F9;--card:#EAEAF3;--card2:#E1E1EC;
+  --border:#D2D2E2;--brd2:#BEBECE;--text:#0D0D18;--dim:#8888A0;
   --dim2:#666680;--acbg:rgba(31,214,156,.10);--acglow:rgba(31,214,156,.20);
   --redbg:rgba(240,96,90,.08);--amberbg:rgba(245,163,66,.08);--purplebg:rgba(123,140,255,.08);
 }
@@ -186,10 +186,10 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .search-clear{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;line-height:1;}
 
 /* FEED */
-.feed-wrap{flex:1;overflow-y:auto;min-height:0;position:relative;}
-.feed-scroll{padding:1rem 1.25rem;display:flex;flex-direction:column;gap:10px;min-height:100%;}
-.feed-wrap::-webkit-scrollbar{width:3px;}
-.feed-wrap::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:3px;}
+.feed-scroll{flex:1;overflow-y:auto;min-height:0;position:relative;
+             padding:1rem 1.25rem;display:flex;flex-direction:column;gap:10px;}
+.feed-scroll::-webkit-scrollbar{width:3px;}
+.feed-scroll::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:3px;}
 .feed-empty{position:absolute;inset:0;z-index:2;background:var(--bg);display:flex;
             flex-direction:column;align-items:center;justify-content:center;
             gap:14px;color:var(--dim);text-align:center;padding:2rem;
@@ -454,7 +454,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 /* DOCUMENTS */
 #docPane{display:none;flex-direction:column;flex:1;overflow:hidden;}
 .editor-pane.doc-active #docPane{display:flex;}
-.editor-pane.doc-active .feed-wrap,
+.editor-pane.doc-active .feed-scroll,
 .editor-pane.doc-active #typingStrip,
 .editor-pane.doc-active .input-area,
 .editor-pane.doc-active #pinnedStrip,
@@ -630,9 +630,8 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <button class="search-clear" onclick="clearSearch()">×</button>
     </div>
 
-    <div class="feed-wrap">
-    <div class="feed-scroll" id="feed"></div>
-    <div class="feed-empty" id="feedEmpty">
+    <div class="feed-scroll" id="feed">
+      <div class="feed-empty" id="feedEmpty">
         <svg width="72" height="72" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M56 20 C56 12 48 8 42 8 C36 8 28 12 28 20 L28 52 C28 64 52 64 52 52 L52 24 C52 18 36 18 36 24 L36 52" stroke="#7B8CFF" stroke-width="5" fill="none" stroke-linecap="round"/>
           <circle cx="34" cy="70" r="3" fill="#7B8CFF"/>
@@ -1387,7 +1386,7 @@ function renderActionItems(topicEntries,groupEntries){
   const feed=document.getElementById('feed');
   const empty=document.getElementById('feedEmpty');
   const emptyMsg=document.getElementById('feedEmptyMsg');
-  [...feed.children].forEach(el=>el.remove());
+  [...feed.children].forEach(el=>{if(el.id!=='feedEmpty')el.remove();});
   empty.style.display='flex';
   const items=[];
   Object.entries(topicEntries).forEach(([topicId,entries])=>{
@@ -1423,7 +1422,7 @@ function renderActionItems(topicEntries,groupEntries){
   addSection('Assigned to Me','#F0605A',assignedToMe);
   addSection('My Action Items','var(--amber)',mine);
   addSection('Team Action Items','var(--dim)',others);
-  const fw=document.querySelector('.feed-wrap');setTimeout(()=>{if(fw)fw.scrollTop=0;},50);
+  const fw=document.getElementById('feed');setTimeout(()=>{if(fw)fw.scrollTop=0;},50);
 }
 function updateActionCount(){
   let count=0;
@@ -1603,7 +1602,7 @@ function clearSearch(){
 // ── FEED ─────────────────────────────────────────────
 function clearFeed(){
   const feed=document.getElementById('feed');
-  [...feed.children].forEach(el=>el.remove());
+  [...feed.children].forEach(el=>{if(el.id!=='feedEmpty')el.remove();});
   const empty=document.getElementById('feedEmpty');
   empty.classList.remove('fading');
   empty.style.display='flex';
@@ -1635,7 +1634,7 @@ function renderFeed(data,isDm=false){
     }
     feed.appendChild(buildEntry(id,e,isDm));
   });
-  const fw=document.querySelector('.feed-wrap');setTimeout(()=>{if(fw)fw.scrollTop=fw.scrollHeight;},50);
+  const fw=document.getElementById('feed');setTimeout(()=>{if(fw)fw.scrollTop=fw.scrollHeight;},50);
   markSeen(currentTopicId);
 }
 function parseMentions(text){
@@ -2239,8 +2238,7 @@ function showMobileTab(tab){
     } else if(currentView==='doc'&&currentDocId){
       // stay in current doc view — editor already live
     } else {
-      clearFeed();renderFeed(allEntries[currentTopicId]||{});
-      currentView='topic';
+      switchTopic(currentTopicId);
     }
   }
   if(tab==='team'){renderTeam();renderMobileDms();}
@@ -2320,7 +2318,7 @@ function switchToFiles(){
 function renderFiles(items){
   if(currentView!=='files')return;
   const feed=document.getElementById('feed');
-  [...feed.children].forEach(el=>el.remove());
+  [...feed.children].forEach(el=>{if(el.id!=='feedEmpty')el.remove();});
   const empty=document.getElementById('feedEmpty');
   const emptyMsg=document.getElementById('feedEmptyMsg');
   if(!items.length){
@@ -2362,7 +2360,7 @@ function renderFiles(items){
       feed.appendChild(row);
     });
   });
-  const fw=document.querySelector('.feed-wrap');setTimeout(()=>{if(fw)fw.scrollTop=0;},50);
+  const fw=document.getElementById('feed');setTimeout(()=>{if(fw)fw.scrollTop=0;},50);
 }
 
 function toast(msg,ok){const el=document.getElementById('toast');if(toastT)clearTimeout(toastT);el.textContent=msg;el.className='show'+(ok?' ok':'');toastT=setTimeout(()=>{el.className='';},3000);}
