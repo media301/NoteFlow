@@ -2284,6 +2284,8 @@ function showMobileTab(tab){
       // stay in current DM view — feed already live
     } else if(currentView==='doc'&&currentDocId){
       // stay in current doc view — editor already live
+    } else if(currentView==='files'||currentView==='actions'){
+      // stay in files/actions view — already set up by switchToFiles/switchToActionItems
     } else {
       switchTopic(currentTopicId);
       forceIosRepaint();
