@@ -1844,6 +1844,8 @@ function showMobileTab(tab){
     document.getElementById('actionItemsRow')?.classList.remove('action-active');
     if(currentView==='group'&&currentGroupId){
       // stay in current group view — feed already live
+    } else if(currentView==='dm'&&currentDmWith){
+      // stay in current DM view — feed already live
     } else {
       clearFeed();renderFeed(allEntries[currentTopicId]||{});
       currentView='topic';
