@@ -1384,10 +1384,12 @@ function openDm(userId,name,initials,color,existingKey){
   document.getElementById('actionItemsRow')?.classList.remove('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
   document.getElementById('feedEmptyMsg').textContent=`Send ${name} a message to start the conversation.`;
-  clearFeed();cancelReply();cancelActionTag();
-  const _syncEntries=allDmsData[key]?.entries;
-  if(_syncEntries&&Object.keys(_syncEntries).length)renderFeed(_syncEntries,true);
-  forceIosRepaint();
+  clearFeed();cancelReply();cancelActionTag();forceIosRepaint();
+  const _dmKey=key;
+  requestAnimationFrame(()=>{
+    const _sync=allDmsData[_dmKey]?.entries;
+    if(_sync&&Object.keys(_sync).length)renderFeed(_sync,true);
+  });
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
     set(ref(db,'dms/'+key+'/members/'+userId),{name,initials,color});
