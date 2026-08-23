@@ -25,10 +25,13 @@
   });
   const db = getDatabase(app);
   const COLORS = ['#1FD69C','#7B8CFF','#F5A342','#FF78C4','#4ECDC4','#F0605A','#A78BFA','#34D399'];
+  function nameToId(n){let h=0,s=n.toLowerCase().trim();for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return 'u_'+Math.abs(h).toString(36);}
+  window._nameToId=nameToId;
+  const savedName=localStorage.getItem('nf_name');
   let myColor = localStorage.getItem('nf_color');
-  let myId    = localStorage.getItem('nf_id');
+  let myId = savedName ? nameToId(savedName) : (localStorage.getItem('nf_id')||'u_'+Math.random().toString(36).slice(2,9));
   if (!myColor) { myColor = COLORS[Math.floor(Math.random()*COLORS.length)]; localStorage.setItem('nf_color',myColor); }
-  if (!myId)    { myId = 'u_'+Math.random().toString(36).slice(2,9); localStorage.setItem('nf_id',myId); }
+  localStorage.setItem('nf_id',myId);
   window._fb = { db, ref, onValue, set, push, remove, get, myId, myColor };
 </script>
 <style>
@@ -616,11 +619,11 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         </label>
         <button class="tool-btn" id="actionBtn" onclick="toggleActionTag()">✅ Action Item</button>
         <div style="width:1px;height:16px;background:var(--brd2);flex-shrink:0;margin:0 2px"></div>
-        <button class="tool-btn fmt-btn" onclick="fmtWrap('**','**')" title="Bold"><strong>B</strong></button>
-        <button class="tool-btn fmt-btn" onclick="fmtWrap('_','_')" title="Italic"><em style="font-style:italic">I</em></button>
-        <button class="tool-btn fmt-btn" onclick="fmtBullet()" title="Bullet list">• List</button>
-        <button class="tool-btn fmt-btn" onclick="fmtWrap('\`','\`')" title="Code"><span style="font-family:monospace">{ }</span></button>
-        <button class="tool-btn fmt-btn" onclick="fmtNewline()" title="New line">↵</button>
+        <button class="tool-btn fmt-btn" onmousedown="event.preventDefault()" onclick="fmtWrap('**','**')" title="Bold"><strong>B</strong></button>
+        <button class="tool-btn fmt-btn" onmousedown="event.preventDefault()" onclick="fmtWrap('_','_')" title="Italic"><em style="font-style:italic">I</em></button>
+        <button class="tool-btn fmt-btn" onmousedown="event.preventDefault()" onclick="fmtBullet()" title="Bullet list">• List</button>
+        <button class="tool-btn fmt-btn" onmousedown="event.preventDefault()" onclick="fmtWrap('\`','\`')" title="Code"><span style="font-family:monospace">{ }</span></button>
+        <button class="tool-btn fmt-btn" onmousedown="event.preventDefault()" onclick="fmtNewline()" title="New line">↵</button>
         <input type="file" id="fileInput" multiple accept="image/*,*/*">
       </div>
       <div class="text-row">
@@ -883,7 +886,12 @@ function toggleTheme(){applyTheme(isDark?'light':'dark');}
 // ── AUTO-LOGIN ───────────────────────────────────────
 function proceedAfterAuth(){
   const n=localStorage.getItem('nf_name'),i=localStorage.getItem('nf_initials');
-  if(n&&i){myName=n;myInitials=i;startApp();}
+  if(n&&i){
+    myName=n;myInitials=i;
+    myId=window._nameToId?window._nameToId(n):(localStorage.getItem('nf_id')||'');
+    localStorage.setItem('nf_id',myId);
+    startApp();
+  }
   else{if(n)document.getElementById('nameInput').value=n;document.getElementById('nameModal').classList.add('show');}
 }
 function submitPassphrase(){
@@ -910,7 +918,9 @@ function joinSession(){
   if(!name){inp.focus();inp.style.borderColor='var(--red)';return;}
   myName=name;
   myInitials=name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-  localStorage.setItem('nf_name',myName);localStorage.setItem('nf_initials',myInitials);
+  myId=window._nameToId?window._nameToId(name):(localStorage.getItem('nf_id')||'');
+  localStorage.setItem('nf_name',myName);localStorage.setItem('nf_initials',myInitials);localStorage.setItem('nf_id',myId);
+  if(window._fb)window._fb.myId=myId;
   document.getElementById('nameModal').classList.remove('show');
   startApp();
 }
@@ -932,10 +942,12 @@ function initFirebase(){
     // Resolve persistent identity
     const pkey=nameKey(myName);
     try{
+      const correctId=window._nameToId?window._nameToId(myName):myId;
+      myId=correctId;localStorage.setItem('nf_id',correctId);
       const snap=await get(ref(db,'profiles/'+pkey));
       const p=snap.val();
-      if(p&&p.id){myId=p.id;myColor=p.color;localStorage.setItem('nf_id',myId);localStorage.setItem('nf_color',myColor);}
-      else{myId=fbId;myColor=fbColor;set(ref(db,'profiles/'+pkey),{id:myId,color:myColor,name:myName,initials:myInitials});}
+      if(p&&p.color){myColor=p.color;localStorage.setItem('nf_color',myColor);}
+      set(ref(db,'profiles/'+pkey),{id:correctId,color:myColor,name:myName,initials:myInitials});
     }catch(_){myId=fbId;myColor=fbColor;}
     const meDot=document.getElementById('meDot');if(meDot){meDot.style.background=myColor;meDot.textContent=myInitials;}
 
@@ -1113,7 +1125,7 @@ function renderDmList(data){
   const sheetDmSection=document.getElementById('sheetDmSection');
   const sheetDmList=document.getElementById('sheetDmList');
   if(!data){if(dmSection)dmSection.style.display='none';if(sheetDmSection)sheetDmSection.style.display='none';return;}
-  const myDms=Object.entries(data).filter(([k])=>k.includes(myId));
+  const myDms=Object.entries(data).filter(([k])=>k.split('__').includes(myId));
   if(!myDms.length){if(dmSection)dmSection.style.display='none';if(sheetDmSection)sheetDmSection.style.display='none';return;}
   if(dmSection)dmSection.style.display='block';
   if(sheetDmSection)sheetDmSection.style.display='block';
@@ -1858,7 +1870,7 @@ function renderMobileDms(){
   const{db,ref,get}=window._fb;
   get(ref(db,'dms')).then(snap=>{
     const data=snap.val()||{};
-    const myDms=Object.entries(data).filter(([k])=>k.includes(myId));
+    const myDms=Object.entries(data).filter(([k])=>k.split('__').includes(myId));
     const sec=document.getElementById('mobileDmSec');
     const list=document.getElementById('mobileDmList');
     if(!myDms.length||!sec||!list){if(sec)sec.style.display='none';return;}
