@@ -520,7 +520,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <span class="me-name" id="meName"></span>
     </div>
     <!-- help guide -->
-    <button class="icon-btn" onclick="window.open('guide.html','_blank')" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
+    <button class="icon-btn" onclick="openGuide()" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
     <!-- theme toggle -->
     <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light/dark">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -807,6 +807,14 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 </div>
 
 <!-- new doc modal -->
+<div id="guideOverlay" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;background:#fff;">
+  <div style="display:flex;align-items:center;padding:10px 14px;background:#0F1118;border-bottom:1px solid #1E2028;flex-shrink:0;">
+    <span style="font-weight:700;color:#E8EAF0;flex:1;font-size:15px;">📋 User Guide</span>
+    <button onclick="closeGuide()" style="background:#2A2C38;border:none;color:#E8EAF0;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;">✕ Close</button>
+  </div>
+  <iframe src="guide.html" style="flex:1;border:none;width:100%;height:100%;"></iframe>
+</div>
+
 <div class="modal-overlay" id="newDocModal" onclick="if(event.target===this)closeNewDoc()">
   <div class="modal">
     <div style="font-size:1.8rem">📄</div>
@@ -933,7 +941,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <span style="font-size:15px;font-weight:700">Team</span>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="icon-btn" onclick="window.open('guide.html','_blank')" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
+      <button class="icon-btn" onclick="openGuide()" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
       <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
       <button class="hdr-btn primary" style="padding:5px 10px;font-size:12px" onclick="showShare()">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -2490,6 +2498,8 @@ function saveDoc(){
 function docFmt(cmd){document.getElementById('docEditor').focus();document.execCommand(cmd);}
 function docBlock(tag){document.getElementById('docEditor').focus();document.execCommand('formatBlock',false,'<'+tag+'>');}
 
+function openGuide(){const o=document.getElementById('guideOverlay');o.style.display='flex';}
+function closeGuide(){document.getElementById('guideOverlay').style.display='none';}
 function showNewDoc(){
   document.getElementById('newDocModal').classList.add('show');
   document.getElementById('newDocInput').value='';
