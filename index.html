@@ -520,7 +520,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <span class="me-name" id="meName"></span>
     </div>
     <!-- help guide -->
-    <button class="icon-btn" onclick="window.open('https://claude.ai/code/artifact/490e8740-076d-4015-8e16-5ea9bef9228b','_blank')" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
+    <button class="icon-btn" onclick="window.open('guide.html','_blank')" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
     <!-- theme toggle -->
     <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light/dark">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -711,7 +711,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <div class="doc-editor-wrap">
         <div id="docEditor" class="doc-editor" contenteditable="true"
              placeholder="Start typing your document…"
-             oninput="onDocInput()" onblur="onDocBlur()"></div>
+             oninput="onDocInput()" onblur="onDocBlur()" onpaste="onDocPaste(event)"></div>
       </div>
     </div>
   </div>
@@ -933,7 +933,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <span style="font-size:15px;font-weight:700">Team</span>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="icon-btn" onclick="window.open('https://claude.ai/code/artifact/490e8740-076d-4015-8e16-5ea9bef9228b','_blank')" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
+      <button class="icon-btn" onclick="window.open('guide.html','_blank')" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
       <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
       <button class="hdr-btn primary" style="padding:5px 10px;font-size:12px" onclick="showShare()">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -2334,10 +2334,11 @@ function renderDocList(){
   const makeRow=(id,d,mobile)=>{
     const isActive=!mobile&&currentView==='doc'&&currentDocId===id;
     const click=mobile?`openDoc('${esc(id)}');showMobileTab('notes')`:`openDoc('${esc(id)}')`;
-    const sub=d.lastEditedBy?`<span class="row-count" style="font-size:10px">${esc(d.lastEditedBy)}</span>`:'';
-    return `<div class="nav-row${isActive?' active':''}" onclick="${click}">
+    const moreClick=`event.stopPropagation();showDocMenu('${esc(id)}')`;
+    return `<div class="nav-row${isActive?' active':''}" onclick="${click}" style="padding-right:2px">
       <span class="row-icon" style="color:var(--amber)">📄</span>
-      <span class="row-label">${esc(d.name)}</span>${sub}
+      <span class="row-label">${esc(d.name)}</span>
+      <button class="icon-btn" style="font-size:13px;color:var(--dim);padding:2px 4px;margin-left:auto;flex-shrink:0" onmousedown="event.stopPropagation()" onclick="${moreClick}" title="Rename or delete">⋯</button>
     </div>`;
   };
   const empty='<div class="sidebar-empty">No documents yet</div>';
@@ -2385,6 +2386,57 @@ function leaveDocMode(){
   clearDocTyping();
   if(docSaveTimer){clearTimeout(docSaveTimer);docSaveTimer=null;saveDoc();}
   currentDocId=null;
+}
+
+function onDocPaste(e){
+  if(currentView!=='doc'||!currentDocId)return;
+  e.preventDefault();
+  const html=e.clipboardData.getData('text/html');
+  const text=e.clipboardData.getData('text/plain');
+  let out;
+  if(html){out=cleanWordHtml(html);}
+  else{out=text.split(/\r?\n/).map(l=>l.trim()?'<p>'+esc(l)+'</p>':'').join('');}
+  if(out)document.execCommand('insertHTML',false,out);
+}
+
+function cleanWordHtml(html){
+  html=html
+    .replace(/<!--\[if[\s\S]*?\[endif\]-->/gi,'')
+    .replace(/<!--[\s\S]*?-->/g,'')
+    .replace(/<\/?(?:o|w|m):[^>]*>/gi,'');
+  const tmp=document.createElement('div');
+  tmp.innerHTML=html;
+  tmp.querySelectorAll('style,script,meta,link,head').forEach(n=>n.remove());
+  const KEEP_BLOCK=new Set(['p','h1','h2','h3','h4','h5','h6','ul','ol','li','blockquote','pre','hr','table','thead','tbody','tr','td','th']);
+  const KEEP_INLINE=new Set(['strong','em','u','br','sub','sup']);
+  const TO_STRONG=new Set(['b']);
+  const TO_EM=new Set(['i']);
+  const TO_P=new Set(['div','section','article','header','footer','main','aside','nav','figure','figcaption']);
+  const els=Array.from(tmp.querySelectorAll('*')).reverse();
+  for(const el of els){
+    if(!el.parentNode)continue;
+    const tag=el.tagName.toLowerCase();
+    while(el.attributes&&el.attributes.length)el.removeAttribute(el.attributes[0].name);
+    if(TO_STRONG.has(tag)||TO_EM.has(tag)){
+      const repl=document.createElement(TO_STRONG.has(tag)?'strong':'em');
+      while(el.firstChild)repl.appendChild(el.firstChild);
+      el.parentNode.replaceChild(repl,el);continue;
+    }
+    if(TO_P.has(tag)){
+      const p=document.createElement('p');
+      while(el.firstChild)p.appendChild(el.firstChild);
+      el.parentNode.replaceChild(p,el);continue;
+    }
+    if(!KEEP_BLOCK.has(tag)&&!KEEP_INLINE.has(tag)){
+      const par=el.parentNode;
+      while(el.firstChild)par.insertBefore(el.firstChild,el);
+      par.removeChild(el);
+    }
+  }
+  tmp.querySelectorAll('p,h1,h2,h3,h4,h5,h6,li').forEach(el=>{
+    if(!el.textContent.trim()&&!el.querySelector('br'))el.remove();
+  });
+  return tmp.innerHTML.trim();
 }
 
 function onDocInput(){
@@ -2457,6 +2509,23 @@ function deleteDoc(docId){
   remove(ref(db,'docs/'+docId));
   if(currentDocId===docId){leaveDocMode();switchTopic('general');}
   toast(d.name+' deleted',true);
+}
+function showDocMenu(docId){
+  const d=allDocs[docId]||{};
+  const action=window.prompt(`Document: "${d.name}"\n\nType RENAME to rename, DELETE to delete, or cancel:`)?.trim().toUpperCase();
+  if(action==='RENAME'){
+    const newName=window.prompt('New document name:',d.name)?.trim();
+    if(!newName)return;
+    if(!window._fb)return;
+    const{db,ref,set}=window._fb;
+    set(ref(db,'docs/meta/'+docId+'/name'),newName);
+    if(currentDocId===docId){
+      document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--amber)">📄</span><span class="pane-label">${esc(newName)}</span>`;
+    }
+    toast('Renamed to '+newName,true);
+  } else if(action==='DELETE'){
+    deleteDoc(docId);
+  }
 }
 </script>
 </body>
