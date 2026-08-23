@@ -2353,12 +2353,10 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
   if(!('ontouchstart' in window))return;
-  let t=document.getElementById('_iosTick');
-  if(!t){t=document.createElement('div');t.id='_iosTick';
-    t.style.cssText='position:fixed;top:-2px;left:-2px;width:1px;height:1px;pointer-events:none;z-index:0;';
-    document.body.appendChild(t);}
-  t.style.animation='none';void t.offsetWidth;
-  t.style.animation='_iosTick 0.08s linear 6';
+  clearTimeout(window._iosRafTimer);
+  window._iosRafActive=true;
+  window._iosRafTimer=setTimeout(()=>{window._iosRafActive=false;},1500);
+  (function p(){if(window._iosRafActive)requestAnimationFrame(p);})();
 }
 let mobileTab='notes';
 function showMobileTab(tab){
