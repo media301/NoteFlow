@@ -1647,6 +1647,7 @@ function clearFeed(){
 }
 function hideFeedEmpty(empty){
   if(empty.style.display==='none')return;
+  if('ontouchstart' in window){empty.classList.remove('fading');empty.style.display='none';return;}
   empty.classList.add('fading');
   setTimeout(()=>{
     if(empty.classList.contains('fading')){empty.style.display='none';empty.classList.remove('fading');}
@@ -1672,12 +1673,9 @@ function renderFeed(data,isDm=false){
     }
     feed.appendChild(buildEntry(id,e,isDm));
   });
-  const fw=document.getElementById('feed');
-  if(fw){
-    fw.scrollTop=fw.scrollHeight;
-    setTimeout(()=>{fw.scrollTop-=1;requestAnimationFrame(()=>{fw.scrollTop=fw.scrollHeight;});},320);
-  }
+  const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;
   markSeen(currentTopicId);
+  forceIosRepaint();
 }
 function parseMentions(text){
   let h=esc(text);
@@ -2264,11 +2262,11 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
-  const meta=document.querySelector('meta[name="viewport"]');
-  if(!meta)return;
-  const orig=meta.content;
-  meta.content='width=device-width,initial-scale=1.001';
-  requestAnimationFrame(()=>{meta.content=orig;});
+  if(!('ontouchstart' in window))return;
+  const f=document.createElement('iframe');
+  f.style.cssText='position:fixed;top:-2px;left:-2px;width:1px;height:1px;opacity:0;pointer-events:none;border:0;';
+  document.body.appendChild(f);
+  requestAnimationFrame(()=>f.remove());
 }
 let mobileTab='notes';
 function showMobileTab(tab){
