@@ -731,6 +731,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <button class="modal-primary" onclick="updateGroupPass()" style="padding:8px">Update Passphrase</button>
     </div>
     <button class="modal-secondary" onclick="closeGroupMembers()">Close</button>
+    <button class="entry-act-btn del" id="gmDeleteBtn" style="display:none;margin-top:8px;width:100%;justify-content:center;padding:8px" onclick="deleteGroup()">🗑 Delete Group</button>
   </div>
 </div>
 
@@ -1788,7 +1789,8 @@ function switchGroup(groupId){
   const g=allGroups[groupId]||{name:groupId};
   document.getElementById('paneTitle').innerHTML=
     `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
-  document.getElementById('groupMembersBtn').classList.toggle('grp-active',!!g.passphrase);
+  const isGroupAdmin=g.creatorId===myId||g.createdBy===myName||(!g.creatorId&&!g.passphrase);
+  document.getElementById('groupMembersBtn').classList.toggle('grp-active',isGroupAdmin||!!g.passphrase);
   document.getElementById('actionToolbar').style.display='flex';
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
@@ -1808,10 +1810,11 @@ let _gmGroupId=null;
 async function showGroupMembers(groupId){
   _gmGroupId=groupId;
   const g=allGroups[groupId]||{};
-  const isAdmin=g.creatorId===myId||g.createdBy===myName;
+  const isAdmin=g.creatorId===myId||g.createdBy===myName||myGroupIds.has(groupId)||!g.passphrase;
   document.getElementById('gmTitle').textContent=g.name+' — Members';
   const passRow=document.getElementById('gmPassRow');
   const editRow=document.getElementById('gmEditRow');
+  document.getElementById('gmDeleteBtn').style.display=isAdmin?'flex':'none';
   if(isAdmin){
     editRow.style.display='block';
     if(g.passphrase){
@@ -1887,6 +1890,17 @@ async function updateGroupPass(){
   document.getElementById('gmPassText').textContent=np;
   document.getElementById('gmNewPass').value='';
   toast('Passphrase updated',true);
+}
+async function deleteGroup(){
+  if(!_gmGroupId)return;
+  const g=allGroups[_gmGroupId]||{};
+  if(!window.confirm('Delete "'+g.name+'"? This cannot be undone.'))return;
+  const{db,ref,remove}=window._fb;
+  await remove(ref(db,'groups/meta/'+_gmGroupId));
+  await remove(ref(db,'groups/'+_gmGroupId));
+  closeGroupMembers();
+  switchTopic('general');
+  toast(g.name+' deleted',true);
 }
 async function removeGroupMember(uid,name,ban){
   if(!_gmGroupId)return;
