@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>NoteFlow</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><rect width='80' height='80' rx='16' fill='%2309090E'/><path d='M56 20 C56 12 48 8 42 8 C36 8 28 12 28 20 L28 52 C28 64 52 64 52 52 L52 24 C52 18 36 18 36 24 L36 52' stroke='%237B8CFF' stroke-width='5' fill='none' stroke-linecap='round'/><circle cx='34' cy='70' r='3' fill='%237B8CFF'/><circle cx='46' cy='70' r='3' fill='%237B8CFF'/><path d='M31 75 Q40 80 49 75' stroke='%237B8CFF' stroke-width='3' fill='none' stroke-linecap='round'/></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NoteFlow">
@@ -614,6 +615,12 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
           Attach File
         </label>
         <button class="tool-btn" id="actionBtn" onclick="toggleActionTag()">✅ Action Item</button>
+        <div style="width:1px;height:16px;background:var(--brd2);flex-shrink:0;margin:0 2px"></div>
+        <button class="tool-btn fmt-btn" onclick="fmtWrap('**','**')" title="Bold"><strong>B</strong></button>
+        <button class="tool-btn fmt-btn" onclick="fmtWrap('_','_')" title="Italic"><em style="font-style:italic">I</em></button>
+        <button class="tool-btn fmt-btn" onclick="fmtBullet()" title="Bullet list">• List</button>
+        <button class="tool-btn fmt-btn" onclick="fmtWrap('\`','\`')" title="Code"><span style="font-family:monospace">{ }</span></button>
+        <button class="tool-btn fmt-btn" onclick="fmtNewline()" title="New line">↵</button>
         <input type="file" id="fileInput" multiple accept="image/*,*/*">
       </div>
       <div class="text-row">
@@ -817,11 +824,32 @@ let typingTimer=null,searchQuery='',isDark=true;
 const noteInput=document.getElementById('noteInput');
 noteInput.addEventListener('input',()=>{
   noteInput.style.height='auto';
-  noteInput.style.height=Math.min(noteInput.scrollHeight,90)+'px';
+  noteInput.style.height=Math.min(noteInput.scrollHeight,160)+'px';
   pushTyping();
 });
 noteInput.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(mentionPicker.style.display==='flex')return;sendNote();}
+  if(e.key==='Enter'&&!e.shiftKey){
+    if(mentionPicker.style.display==='flex'){e.preventDefault();return;}
+    const val=noteInput.value,pos=noteInput.selectionStart;
+    const lineStart=val.lastIndexOf('\n',pos-1)+1;
+    const currentLine=val.slice(lineStart,pos);
+    if(currentLine==='- '){
+      // empty bullet — remove it and send
+      e.preventDefault();
+      noteInput.value=val.slice(0,lineStart).replace(/\n$/,'')+val.slice(pos);
+      noteInput.selectionStart=noteInput.selectionEnd=lineStart;
+      sendNote();return;
+    }
+    if(currentLine.match(/^- .+/)){
+      // continue bullet list
+      e.preventDefault();
+      noteInput.value=val.slice(0,pos)+'\n- '+val.slice(pos);
+      noteInput.selectionStart=noteInput.selectionEnd=pos+3;
+      noteInput.style.height='auto';noteInput.style.height=Math.min(noteInput.scrollHeight,160)+'px';
+      return;
+    }
+    e.preventDefault();sendNote();
+  }
   if(e.key==='Escape')hideMentionPicker();
   if(e.key==='ArrowDown'&&mentionPicker.style.display==='flex'){e.preventDefault();focusMentionItem(1);}
   if(e.key==='ArrowUp'&&mentionPicker.style.display==='flex'){e.preventDefault();focusMentionItem(-1);}
@@ -1672,6 +1700,35 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
 });
 function fileIcon(n){const e=n.split('.').pop().toLowerCase();return{pdf:'📕',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📊',ppt:'📊',pptx:'📊',mp3:'🎵',wav:'🎵',mp4:'🎬',mov:'🎬',zip:'📦'}[e]||'📄';}
 async function resizeImg(file,maxW){return new Promise(res=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);const c=document.createElement('canvas');let w=img.naturalWidth,h=img.naturalHeight;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',.85));};img.src=url;});}
+
+// ── FORMATTING ────────────────────────────────────────
+function fmtWrap(before,after){
+  const ta=noteInput,s=ta.selectionStart,end=ta.selectionEnd;
+  const sel=ta.value.slice(s,end)||'text';
+  ta.value=ta.value.slice(0,s)+before+sel+after+ta.value.slice(end);
+  ta.selectionStart=s+before.length;ta.selectionEnd=s+before.length+sel.length;
+  ta.focus();ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,160)+'px';
+}
+function fmtBullet(){
+  const ta=noteInput,pos=ta.selectionStart,val=ta.value;
+  const lineStart=val.lastIndexOf('\n',pos-1)+1;
+  const lineEnd=val.indexOf('\n',pos);const end=lineEnd===-1?val.length:lineEnd;
+  const line=val.slice(lineStart,end);
+  if(line.startsWith('- ')){
+    ta.value=val.slice(0,lineStart)+line.slice(2)+val.slice(end);
+    ta.selectionStart=ta.selectionEnd=Math.max(lineStart,pos-2);
+  }else{
+    ta.value=val.slice(0,lineStart)+'- '+line+val.slice(end);
+    ta.selectionStart=ta.selectionEnd=pos+2;
+  }
+  ta.focus();ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,160)+'px';
+}
+function fmtNewline(){
+  const ta=noteInput,pos=ta.selectionStart;
+  ta.value=ta.value.slice(0,pos)+'\n'+ta.value.slice(pos);
+  ta.selectionStart=ta.selectionEnd=pos+1;
+  ta.focus();ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,160)+'px';
+}
 
 // ── VOICE ─────────────────────────────────────────────
 function toggleRec(){if(recording)stopRec();else startRec();}
