@@ -1101,7 +1101,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.2';
+  const _ver='v1.3';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
 }
 function initPWAIcons(){
@@ -1399,6 +1399,10 @@ function openDm(userId,name,initials,color,existingKey){
       window._dmDataCache=window._dmDataCache||{};
       window._dmDataCache[key]=snap.val()||{};
       window._lastFeedData={data:window._dmDataCache[key],isDm:true};
+      if('ontouchstart' in window&&mobileTab==='notes'){
+        const ep=document.querySelector('.editor-pane');
+        if(ep){ep.style.display='none';renderFeed(window._lastFeedData.data,true);requestAnimationFrame(()=>{ep.style.display='';const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;});return;}
+      }
       renderFeed(window._lastFeedData.data,true);
     });
   }
@@ -2381,17 +2385,15 @@ function showMobileTab(tab){
       // stay in current group view — feed already live
     } else if(currentView==='dm'&&currentDmWith){
       const _k=currentDmWith.key;
-      clearFeed();
-      const panel=document.getElementById('mobileTeamPanel');
-      if('ontouchstart' in window&&panel){
-        const onEnd=e=>{
-          if(e.propertyName!=='opacity')return;
-          panel.removeEventListener('transitionend',onEnd);
-          const _e=(window._dmDataCache||{})[_k]||allDmsData[_k]?.entries;
-          if(_e&&Object.keys(_e).length)renderFeed(_e,true);
-        };
-        panel.addEventListener('transitionend',onEnd);
+      const ep=document.querySelector('.editor-pane');
+      if('ontouchstart' in window&&ep){
+        ep.style.display='none';
+        clearFeed();
+        const _e=(window._dmDataCache||{})[_k]||allDmsData[_k]?.entries;
+        if(_e&&Object.keys(_e).length)renderFeed(_e,true);
+        requestAnimationFrame(()=>{ep.style.display='';const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;});
       } else {
+        clearFeed();
         const _e=allDmsData[_k]?.entries;
         if(_e&&Object.keys(_e).length)renderFeed(_e,true);
       }
