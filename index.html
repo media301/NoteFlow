@@ -1069,18 +1069,12 @@ function switchToActionItems(){
   renderTopicList();closeSheet();
   if(!window._fb){renderActionItems({});return;}
   const{db,ref,get}=window._fb;
-  get(ref(db,'topics')).then(snap=>{
-    const data=snap.val()||{};
-    // Merge fetched entries into allEntries cache
-    Object.entries(data).forEach(([tid,tdata])=>{if(tdata&&tdata.entries)allEntries[tid]=tdata.entries;});
-    renderActionItems(allEntries);
-    // Also check groups
-    return get(ref(db,'groups'));
-  }).then(snap=>{
-    if(!snap)return;
-    const gdata=snap.val()||{};
+  Promise.all([get(ref(db,'topics')),get(ref(db,'groups'))]).then(([ts,gs])=>{
+    const tdata=ts.val()||{};
+    Object.entries(tdata).forEach(([tid,tv])=>{if(tv&&tv.entries)allEntries[tid]=tv.entries;});
     const groupEntries={};
-    Object.entries(gdata).forEach(([gid,gval])=>{if(gval&&gval.entries)groupEntries[gid]=gval.entries;});
+    const gdata=gs.val()||{};
+    Object.entries(gdata).forEach(([gid,gv])=>{if(gv&&gv.entries)groupEntries[gid]=gv.entries;});
     renderActionItems(allEntries,groupEntries);
   }).catch(()=>renderActionItems(allEntries));
 }
@@ -1089,7 +1083,9 @@ function renderActionItems(topicEntries,groupEntries){
   const feed=document.getElementById('feed');
   const empty=document.getElementById('feedEmpty');
   const emptyMsg=document.getElementById('feedEmptyMsg');
-  clearFeed();
+  // Clear all feed content including section headers (not just .note-entry)
+  [...feed.children].forEach(el=>{if(el.id!=='feedEmpty')el.remove();});
+  empty.style.display='flex';
   const items=[];
   Object.entries(topicEntries).forEach(([topicId,entries])=>{
     Object.entries(entries).forEach(([id,e])=>{if(e.isAction)items.push({id,e,topicId,source:'#'+(allTopics[topicId]?.title||topicId)});});
@@ -1667,7 +1663,14 @@ function summarizeTopic(){
 function closeSummary(){document.getElementById('summaryModal').classList.remove('show');}
 
 // ── SHARE ─────────────────────────────────────────────
-function showShare(){document.getElementById('shareUrlEl').textContent=location.href;document.getElementById('shareModal').classList.add('show');}
+function showShare(){
+  if(navigator.share){
+    navigator.share({title:'NoteFlow',text:'Join our team on NoteFlow — just tap the link and enter your name.',url:location.href}).catch(()=>{});
+    return;
+  }
+  document.getElementById('shareUrlEl').textContent=location.href;
+  document.getElementById('shareModal').classList.add('show');
+}
 function closeShare(){document.getElementById('shareModal').classList.remove('show');}
 function copyLink(){
   const url=location.href;const done=()=>{toast('Link copied!',true);closeShare();};
