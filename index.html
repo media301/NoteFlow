@@ -695,7 +695,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   <div class="share-inner">
     <div>
       <div class="modal-title" style="text-align:left">Invite Teammates</div>
-      <div class="modal-sub" style="text-align:left;margin-top:4px">Share this link — anyone who opens it joins instantly.</div>
+      <div class="modal-sub" style="text-align:left;margin-top:4px">Share this link and the passphrase: <strong id="sharePhraseEl" style="color:var(--ac)"></strong></div>
     </div>
     <div class="share-row">
       <div class="share-url" id="shareUrlEl"></div>
@@ -1015,6 +1015,7 @@ function switchTopic(topicId){
   document.getElementById('paneTitle').innerHTML=`<span class="pane-hash">#</span><span class="pane-label">${esc(title)}</span>`;
   document.getElementById('noteInput').placeholder='Type a note and press Enter…';
   document.getElementById('actionToolbar').style.display='';
+  document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
   clearFeed();cancelReply();cancelActionTag();
   if(window._fb){
@@ -1062,7 +1063,8 @@ function openDm(userId,name,initials,color){
     `<div class="pane-dm-badge" style="background:${color}">${esc(initials)}</div>
      <div><div class="pane-label">${esc(name)}</div><div class="pane-sub">Direct message</div></div>`;
   document.getElementById('noteInput').placeholder=`Message ${name}…`;
-  document.getElementById('actionToolbar').style.display='none';
+  document.getElementById('actionToolbar').style.display='';
+  document.getElementById('actionBtn').style.display='none';
   clearFeed();cancelReply();cancelActionTag();
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
@@ -1157,8 +1159,9 @@ function renderActionItems(topicEntries,groupEntries){
     const hdr=document.createElement('div');
     hdr.style.cssText=`font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${color};padding:4px 2px 6px;`;
     hdr.textContent=label;feed.appendChild(hdr);
-    list.forEach(({id,e,source})=>{
+    list.forEach(({id,e,source,topicId})=>{
       const div=buildEntry(id,e,false);
+      div.dataset.basePath=(allGroups[topicId]?'groups/':'topics/')+topicId;
       div.style.borderLeft=`3px solid ${color}`;div.style.paddingLeft='6px';
       const src=document.createElement('div');
       src.style.cssText='font-size:10px;color:var(--dim);margin-bottom:2px;';
@@ -1375,7 +1378,14 @@ function renderFeed(data,isDm=false){
   markSeen(currentTopicId);
 }
 function parseMentions(text){
-  return esc(text).replace(/@(\w[\w\s]*?)(?=\s|$|[^a-zA-Z\s])/g,'<span class="mention">@$1</span>');
+  let h=esc(text);
+  h=h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  h=h.replace(/_(.+?)_/g,'<em>$1</em>');
+  h=h.replace(/`(.+?)`/g,'<code style="background:var(--card2);padding:1px 5px;border-radius:3px;font-size:12px;font-family:monospace">$1</code>');
+  h=h.replace(/(^|\n)- (.+)/g,'$1<span style="display:flex;gap:6px;margin:1px 0"><span style="color:var(--ac);flex-shrink:0">•</span><span>$2</span></span>');
+  h=h.replace(/\n/g,'<br>');
+  h=h.replace(/@(\w[\w\s]*?)(?=\s|$|[^a-zA-Z\s])/g,'<span class="mention">@$1</span>');
+  return h;
 }
 
 function buildEntry(id,e,isDm){
@@ -1405,7 +1415,7 @@ function buildEntry(id,e,isDm){
         ${e.pinned?'<span class="pin-badge">📌</span>':''}
         <div class="entry-actions">
           ${!isDm?`<button class="entry-act-btn reply-btn">↩ Reply</button>`:''}
-          ${isMe&&e.type==='text'?`
+          ${isMe&&(e.type==='text'||e.isAction)?`
             <button class="entry-act-btn edit-btn">✏ Edit</button>
             <button class="entry-act-btn${e.pinned?' pin-active':''} pin-btn">${e.pinned?'📌 Unpin':'📌 Pin'}</button>`:''}
           ${isMe?`<button class="entry-act-btn del del-btn">🗑 Delete</button>`:''}
@@ -1539,8 +1549,8 @@ function startInlineEdit(entryDiv,entryId,e){
     const newText=ta.value.trim();
     if(newText&&window._fb){
       const{db,ref,set}=window._fb;
-      const path=currentBasePath()+'/entries/'+entryId;
-      set(ref(db,path),{...e,text:newText,edited:true});
+      const basePath=entryDiv.dataset.basePath||currentBasePath();
+      set(ref(db,basePath+'/entries/'+entryId),{...e,text:newText,edited:true});
     }
     textEl.innerHTML=parseMentions(newText);textEl.style.display='';ta.remove();btns.remove();
   });
@@ -1628,6 +1638,7 @@ function switchGroup(groupId){
   document.getElementById('paneTitle').innerHTML=
     `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
   document.getElementById('actionToolbar').style.display='flex';
+  document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
   renderGroupList();renderTopicList();renderDmList(allDmsData);
   clearFeed();
@@ -1730,11 +1741,15 @@ function closeSummary(){document.getElementById('summaryModal').classList.remove
 
 // ── SHARE ─────────────────────────────────────────────
 function showShare(){
-  if(navigator.share){
-    navigator.share({title:'NoteFlow',text:'Join our team on NoteFlow — just tap the link and enter your name.',url:location.href}).catch(()=>{});
+  const isMobile=/iPhone|iPad|Android/i.test(navigator.userAgent);
+  const phrase=TEAM_PASSPHRASES[0]||'';
+  const shareText=`Join our team on NoteFlow — tap the link and enter the passphrase: ${phrase}`;
+  if(isMobile&&navigator.share){
+    navigator.share({title:'NoteFlow',text:shareText,url:location.href}).catch(()=>{});
     return;
   }
   document.getElementById('shareUrlEl').textContent=location.href;
+  document.getElementById('sharePhraseEl').textContent=TEAM_PASSPHRASES[0]||'';
   document.getElementById('shareModal').classList.add('show');
 }
 function closeShare(){document.getElementById('shareModal').classList.remove('show');}
