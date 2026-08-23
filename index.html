@@ -239,6 +239,19 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .entry-img img{width:100%;max-height:320px;object-fit:contain;background:#000;display:block;}
 .entry-file{display:flex;align-items:center;gap:7px;margin-top:6px;padding:7px 10px;
             background:var(--card2);border-radius:7px;border:1px solid var(--border);font-size:12.5px;color:var(--dim2);}
+.entry-file:hover{border-color:var(--ac);background:var(--acbg);}
+/* FILE LIBRARY */
+.file-lib-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf);
+              border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:default;}
+.file-lib-row.downloadable{cursor:pointer;}
+.file-lib-row.downloadable:hover{border-color:var(--ac);background:var(--acbg);}
+.file-lib-icon{font-size:1.5rem;flex-shrink:0;line-height:1;}
+.file-lib-body{flex:1;min-width:0;}
+.file-lib-name{font-weight:600;font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-lib-meta{font-size:11px;color:var(--dim);margin-top:2px;}
+.file-lib-dl{background:var(--ac);color:#fff;border:none;border-radius:6px;padding:5px 10px;
+             font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;flex-shrink:0;white-space:nowrap;}
+.file-lib-unavail{font-size:11px;color:var(--dim);flex-shrink:0;white-space:nowrap;}
 
 /* Reactions */
 .reactions-bar{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;}
@@ -537,6 +550,10 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
           <span class="row-icon">✅</span>
           <span class="row-label">Action Items</span>
           <span class="row-count" id="actionCount"></span>
+        </div>
+        <div class="nav-row" id="filesRow" onclick="switchToFiles()">
+          <span class="row-icon">📎</span>
+          <span class="row-label">Files</span>
         </div>
       </div>
       <div class="sidebar-sec" id="groupSection">
@@ -847,6 +864,10 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <span class="row-label">Action Items</span>
       <span class="row-count" id="sheetActionCount"></span>
     </div>
+    <div class="nav-row" onclick="closeSheet();setTimeout(switchToFiles,350)">
+      <span class="row-icon">📎</span>
+      <span class="row-label">Files</span>
+    </div>
   </div>
   <div style="margin-top:1rem" id="sheetDmSection">
     <div class="sheet-sec-title">Direct Messages</div>
@@ -897,6 +918,15 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   <div class="mobile-panel-sec">
     <div class="mobile-panel-label">Documents <button class="add-btn" onclick="showNewDoc()">+</button></div>
     <div id="mobileDocList"><div class="sidebar-empty">No documents yet</div></div>
+  </div>
+  <div class="mobile-panel-sec">
+    <div class="mobile-panel-label">Views</div>
+    <div class="nav-row" onclick="switchToFiles();showMobileTab('notes')">
+      <span class="row-icon">📎</span><span class="row-label">Files</span>
+    </div>
+    <div class="nav-row" onclick="switchToActionItems();showMobileTab('notes')">
+      <span class="row-icon">✅</span><span class="row-label">Action Items</span>
+    </div>
   </div>
 </div>
 <div class="mobile-panel" id="mobileTeamPanel">
@@ -1179,6 +1209,7 @@ function switchTopic(topicId){
   document.getElementById('actionToolbar').style.display='';
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
+  document.getElementById('filesRow')?.classList.remove('action-active');
   clearFeed();cancelReply();cancelActionTag();
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
@@ -1230,6 +1261,8 @@ function openDm(userId,name,initials,color,existingKey){
   document.getElementById('noteInput').placeholder=`Message ${name}…`;
   document.getElementById('actionToolbar').style.display='';
   document.getElementById('actionBtn').style.display='none';
+  document.getElementById('actionItemsRow')?.classList.remove('action-active');
+  document.getElementById('filesRow')?.classList.remove('action-active');
   clearFeed();cancelReply();cancelActionTag();
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
@@ -1308,6 +1341,7 @@ function switchToActionItems(){
   document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--amber)">✅</span><span class="pane-label">Action Items</span>`;
   document.getElementById('actionToolbar').style.display='none';
   document.getElementById('actionItemsRow').classList.add('action-active');
+  document.getElementById('filesRow')?.classList.remove('action-active');
   clearFeed();
   renderTopicList();closeSheet();
   if(!window._fb){renderActionItems({});return;}
@@ -1592,7 +1626,9 @@ function buildEntry(id,e,isDm){
       </div>`:'';
   let content='';
   if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
-  else if(e.type==='file')content=`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span></div>`;
+  else if(e.type==='file')content=e.src
+    ?`<div class="entry-file" onclick="downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')" style="cursor:pointer" title="Click to download"><span>${esc(e.icon||'📄')}</span><span style="flex:1">${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--ac);font-weight:600">↓ Download</span></div>`
+    :`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--dim)">no download</span></div>`;
   else content=`<div class="entry-text">${parseMentions(e.text||'')}</div>`;
   const bubbleClass='entry-bubble'+(e.isAction?' is-action':'')+(e.pinned?' is-pinned':'');
   div.innerHTML=`
@@ -1871,6 +1907,7 @@ function switchGroup(groupId){
   document.getElementById('actionToolbar').style.display='flex';
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
+  document.getElementById('filesRow')?.classList.remove('action-active');
   renderGroupList();renderTopicList();renderDmList(allDmsData);
   clearFeed();
   if(window._fb){
@@ -2006,11 +2043,17 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
     noteInput.focus();
     toast('Photo ready — add a caption or send now',true);
   }else{
-    pushEntry({type:'file',filename:f.name,icon:fileIcon(f.name),name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()});
-    toast('File attached!',true);
+    const MAX=5*1024*1024;
+    if(f.size>MAX){toast('File too large (max 5 MB). Share a link from Google Drive or Dropbox instead.',false);return;}
+    toast('Uploading '+f.name+'…',true);
+    const src=await fileToBase64(f);
+    pushEntry({type:'file',filename:f.name,icon:fileIcon(f.name),src,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()});
+    toast('File shared!',true);
   }
 });
 function fileIcon(n){const e=n.split('.').pop().toLowerCase();return{pdf:'📕',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📊',ppt:'📊',pptx:'📊',mp3:'🎵',wav:'🎵',mp4:'🎬',mov:'🎬',zip:'📦'}[e]||'📄';}
+function fileToBase64(f){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(f);});}
+function downloadFile(filename,src){const a=document.createElement('a');a.href=src;a.download=filename;a.click();}
 async function resizeImg(file,maxW){return new Promise(res=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);const c=document.createElement('canvas');let w=img.naturalWidth,h=img.naturalHeight;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',.85));};img.src=url;});}
 
 // ── FORMATTING ────────────────────────────────────────
@@ -2152,6 +2195,7 @@ function showMobileTab(tab){
   if(tab==='actions'){switchToActionItems();mobileTab='actions';}
   if(tab==='notes'){
     document.getElementById('actionItemsRow')?.classList.remove('action-active');
+    document.getElementById('filesRow')?.classList.remove('action-active');
     if(currentView==='group'&&currentGroupId){
       // stay in current group view — feed already live
     } else if(currentView==='dm'&&currentDmWith){
@@ -2201,6 +2245,86 @@ function openSheet(){renderTopicList();document.getElementById('sheetOverlay').c
 function closeSheet(){document.getElementById('sheetOverlay').classList.remove('show');document.getElementById('bottomSheet').classList.remove('show');}
 
 // ── TOAST ─────────────────────────────────────────────
+// ── FILES VIEW ────────────────────────────────────────
+function switchToFiles(){
+  leaveDocMode();
+  currentView='files';currentDmWith=null;currentGroupId=null;currentDocId=null;
+  document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--ac)">📎</span><span class="pane-label">Files</span>`;
+  document.getElementById('actionToolbar').style.display='none';
+  document.getElementById('groupMembersBtn').classList.remove('grp-active');
+  document.getElementById('actionItemsRow').classList.remove('action-active');
+  document.getElementById('filesRow').classList.add('action-active');
+  clearFeed();renderTopicList();closeSheet();
+  if(!window._fb){renderFiles([]);return;}
+  const{db,ref,get}=window._fb;
+  Promise.all([get(ref(db,'topics')),get(ref(db,'groups'))]).then(([ts,gs])=>{
+    const items=[];
+    const tdata=ts.val()||{};
+    Object.entries(tdata).forEach(([tid,tv])=>{
+      const title=(allTopics[tid]&&allTopics[tid].title)||tid;
+      Object.entries(tv.entries||{}).forEach(([,e])=>{
+        if(e.type==='file'||e.type==='image')items.push({...e,source:'#'+title,sourceId:tid,sourceType:'topic'});
+      });
+    });
+    const gdata=gs.val()||{};
+    Object.entries(gdata).forEach(([gid,gv])=>{
+      const name=(allGroups[gid]&&allGroups[gid].name)||gid;
+      Object.entries(gv.entries||{}).forEach(([,e])=>{
+        if(e.type==='file'||e.type==='image')items.push({...e,source:'👥'+name,sourceId:gid,sourceType:'group'});
+      });
+    });
+    items.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    renderFiles(items);
+  }).catch(()=>renderFiles([]));
+}
+
+function renderFiles(items){
+  if(currentView!=='files')return;
+  const feed=document.getElementById('feed');
+  [...feed.children].forEach(el=>{if(el.id!=='feedEmpty')el.remove();});
+  const empty=document.getElementById('feedEmpty');
+  const emptyMsg=document.getElementById('feedEmptyMsg');
+  if(!items.length){
+    empty.style.display='flex';
+    emptyMsg.textContent='No files shared yet. Attach a file to any note using the Attach File button.';
+    return;
+  }
+  empty.style.display='none';
+
+  // Group by date
+  const groups={};
+  items.forEach(e=>{
+    const d=e.ts?new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'Unknown date';
+    if(!groups[d])groups[d]=[];
+    groups[d].push(e);
+  });
+
+  Object.entries(groups).forEach(([date,entries])=>{
+    const hdr=document.createElement('div');
+    hdr.style.cssText='font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding:4px 0 8px;margin-top:8px';
+    hdr.textContent=date;
+    feed.appendChild(hdr);
+    entries.forEach(e=>{
+      const row=document.createElement('div');
+      const hasSrc=!!e.src;
+      const isImg=e.type==='image';
+      row.className='file-lib-row'+(hasSrc?' downloadable':'');
+      if(hasSrc)row.onclick=()=>downloadFile(e.filename||'file',e.src);
+      const time=e.ts?new Date(e.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';
+      const sizeNote=isImg?'photo':'file';
+      row.innerHTML=`
+        <div class="file-lib-icon">${isImg?'🖼':esc(e.icon||'📄')}</div>
+        <div class="file-lib-body">
+          <div class="file-lib-name">${esc(e.filename||'Unnamed')}</div>
+          <div class="file-lib-meta">Shared by <strong>${esc(e.name||'Unknown')}</strong> in <strong>${esc(e.source||'')}</strong>${time?' · '+time:''}</div>
+        </div>
+        ${hasSrc?`<button class="file-lib-dl" onclick="event.stopPropagation();downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')">↓ Download</button>`
+                :`<span class="file-lib-unavail">No download<br><span style="font-size:10px">shared before this was added</span></span>`}`;
+      feed.appendChild(row);
+    });
+  });
+}
+
 function toast(msg,ok){const el=document.getElementById('toast');if(toastT)clearTimeout(toastT);el.textContent=msg;el.className='show'+(ok?' ok':'');toastT=setTimeout(()=>{el.className='';},3000);}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
@@ -2229,6 +2353,7 @@ function openDoc(docId){
   currentView='doc';currentDocId=docId;currentDmWith=null;currentGroupId=null;
   document.getElementById('groupMembersBtn').classList.remove('grp-active');
   document.getElementById('actionItemsRow').classList.remove('action-active');
+  document.getElementById('filesRow')?.classList.remove('action-active');
   stopTypingIndicator();cancelReply();cancelActionTag();closeSheet();
   const d=allDocs[docId]||{name:'Document'};
   document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--amber)">📄</span><span class="pane-label">${esc(d.name)}</span>`;
