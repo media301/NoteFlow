@@ -1146,7 +1146,7 @@ function renderTeam(){
   const teamRows=Object.entries(allProfiles).map(([id,p])=>{
     const isOnline=!!allUsers[id];
     const isMe=id===myId;
-    return `<div class="who-row"${!isMe?` onclick="openDm('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}');showMobileTab('notes')"`:''}>
+    return `<div class="who-row"${!isMe?` onclick="openDm('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}',findExistingDmKey('${esc(id)}'));showMobileTab('notes')"`:''}>
       <div style="position:relative;flex-shrink:0">
         <div class="who-badge" style="background:${p.color}">${esc(p.initials)}</div>
         ${isOnline?`<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;background:#1FD69C;border:1.5px solid var(--surf)"></div>`:''}
@@ -1256,9 +1256,20 @@ function createTopic(){
 
 // ── DMs ──────────────────────────────────────────────
 function dmKey(a,b){return [a,b].sort().join('__');}
+function findExistingDmKey(userId){
+  const direct=dmKey(myId,userId);
+  if(allDmsData&&allDmsData[direct])return direct;
+  if(allDmsData){
+    for(const [key,dmData] of Object.entries(allDmsData)){
+      const parts=key.split('__');
+      if(parts.includes(userId)&&(parts.includes(myId)||(myName&&dmData.members&&Object.values(dmData.members).some(m=>m.name===myName))))return key;
+    }
+  }
+  return direct;
+}
 function openDm(userId,name,initials,color,existingKey){
   leaveDocMode();
-  const key=existingKey||dmKey(myId,userId);
+  const key=existingKey||findExistingDmKey(userId);
   currentView='dm';currentDmWith={userId,name,initials,color,key};currentGroupId=null;
   document.getElementById('groupMembersBtn').classList.remove('grp-active');
   localStorage.setItem('seen_dm_'+key,Date.now());
@@ -1409,6 +1420,7 @@ function renderActionItems(topicEntries,groupEntries){
   addSection('Assigned to Me','#F0605A',assignedToMe);
   addSection('My Action Items','var(--amber)',mine);
   addSection('Team Action Items','var(--dim)',others);
+  requestAnimationFrame(()=>{feed.scrollTop=0;});
 }
 function updateActionCount(){
   let count=0;
@@ -1611,7 +1623,7 @@ function renderFeed(data,isDm=false){
     }
     feed.appendChild(buildEntry(id,e,isDm));
   });
-  feed.scrollTop=feed.scrollHeight;
+  requestAnimationFrame(()=>{feed.scrollTop=feed.scrollHeight;});
   markSeen(currentTopicId);
 }
 function parseMentions(text){
@@ -2338,6 +2350,7 @@ function renderFiles(items){
       feed.appendChild(row);
     });
   });
+  requestAnimationFrame(()=>{feed.scrollTop=0;});
 }
 
 function toast(msg,ok){const el=document.getElementById('toast');if(toastT)clearTimeout(toastT);el.textContent=msg;el.className='show'+(ok?' ok':'');toastT=setTimeout(()=>{el.className='';},3000);}
