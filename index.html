@@ -206,6 +206,12 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .entry-time{font-size:10.5px;color:var(--dim);flex:1;}
 .action-badge{font-size:10px;font-weight:700;background:var(--amber);color:#000;
               border-radius:4px;padding:1px 5px;}
+.assign-chip{display:flex;align-items:center;gap:3px;padding:2px 7px 2px 3px;border-radius:20px;
+  border:1.5px solid var(--border);cursor:pointer;font-size:11px;color:var(--dim2);
+  transition:border-color .15s,background .15s;white-space:nowrap;flex-shrink:0;}
+.assign-chip.selected{border-color:var(--red);background:var(--redbg);color:var(--text);}
+.assign-chip .ac-dot{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:7px;font-weight:700;color:#000;flex-shrink:0;}
 .pin-badge{font-size:10px;color:var(--amber);}
 .entry-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s;flex-wrap:wrap;}
 .note-entry:hover .entry-actions{opacity:1;}
@@ -494,6 +500,13 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
           <span class="row-count" id="actionCount"></span>
         </div>
       </div>
+      <div class="sidebar-sec" id="groupSection">
+        <div class="sidebar-label">
+          Groups
+          <button class="add-btn" onclick="showNewGroup()" title="New group">+</button>
+        </div>
+        <div id="groupList"><div class="sidebar-empty">No groups yet</div></div>
+      </div>
       <div class="sidebar-sec" id="dmSection" style="display:none">
         <div class="sidebar-label">Direct Messages</div>
         <div id="dmList"></div>
@@ -576,13 +589,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <div class="action-toggle-bar" id="actionBar">
         <span style="font-size:14px">✅</span>
         <span class="action-toggle-label">Action Item</span>
-        <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end">
-          <span style="font-size:11px;color:var(--amber)">Assign to:</span>
-          <select id="assignSelect" style="background:var(--card2);border:1px solid rgba(245,163,66,.4);
-                  color:var(--text);border-radius:6px;padding:3px 7px;font-size:12px;font-family:inherit;outline:none;">
-            <option value="">Nobody</option>
-          </select>
-        </div>
+        <div id="assignPicker" style="display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;padding:0 4px;"></div>
         <button class="action-x" onclick="cancelActionTag()">×</button>
       </div>
       <div class="action-toolbar" id="actionToolbar">
@@ -637,6 +644,18 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   </div>
 </div>
 
+<!-- new group modal -->
+<div class="modal-overlay" id="newGroupModal" onclick="if(event.target===this)closeNewGroup()">
+  <div class="modal">
+    <div style="font-size:1.8rem">👥</div>
+    <div class="modal-title">New Group</div>
+    <div class="modal-sub">e.g. "Sales", "Marketing", "Accounting"</div>
+    <input class="modal-input" id="newGroupInput" placeholder="Group name…" maxlength="40" autocomplete="off">
+    <button class="modal-primary" onclick="createGroup()">Create Group →</button>
+    <button class="modal-secondary" onclick="closeNewGroup()">Cancel</button>
+  </div>
+</div>
+
 <!-- AI summary modal -->
 <div class="modal-overlay" id="summaryModal" onclick="if(event.target===this)closeSummary()">
   <div class="modal" style="max-width:480px">
@@ -657,6 +676,11 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <div class="share-row">
       <div class="share-url" id="shareUrlEl"></div>
       <button class="copy-btn" onclick="copyLink()">Copy</button>
+    </div>
+    <div style="background:var(--card2);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--dim2);line-height:1.7">
+      <div style="font-weight:700;color:var(--text);margin-bottom:4px">📱 Add to Phone Home Screen</div>
+      <div><strong style="color:var(--text)">iPhone:</strong> Open link in <strong style="color:var(--ac)">Safari</strong> → tap the Share button (□↑) → "Add to Home Screen"</div>
+      <div style="margin-top:4px"><strong style="color:var(--text)">Android:</strong> Open link in <strong style="color:var(--ac)">Chrome</strong> → tap ⋮ menu → "Add to Home screen"</div>
     </div>
     <button class="modal-secondary" onclick="closeShare()">Done</button>
   </div>
@@ -721,12 +745,20 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <div class="mobile-panel-label">Topics <button class="add-btn" onclick="showNewTopic()">+</button></div>
     <div id="mobileTopicList"></div>
   </div>
+  <div class="mobile-panel-sec">
+    <div class="mobile-panel-label">Groups <button class="add-btn" onclick="showNewGroup()">+</button></div>
+    <div id="mobileGroupList"><div class="sidebar-empty">No groups yet</div></div>
+  </div>
 </div>
 <div class="mobile-panel" id="mobileTeamPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
     <span style="font-size:15px;font-weight:700">Team</span>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
+      <button class="hdr-btn primary" style="padding:5px 10px;font-size:12px" onclick="showShare()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Invite
+      </button>
       <button class="signout-btn" style="padding:6px 12px" onclick="signOut()">Sign Out</button>
     </div>
   </div>
@@ -751,9 +783,9 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 'use strict';
 const EMOJIS=['👍','❤️','😂','🎉','💡'];
 let myName='',myInitials='',myColor='',myId='';
-let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false;
-let currentView='topic',currentTopicId='general',currentDmWith=null;
-let allTopics={},allUsers={},allEntries={},allProfiles={};
+let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,assignedUsers=[];
+let currentView='topic',currentTopicId='general',currentDmWith=null,currentGroupId=null;
+let allTopics={},allUsers={},allEntries={},allProfiles={},allGroups={};
 let typingTimer=null,searchQuery='',isDark=true;
 
 // Textarea
@@ -862,6 +894,7 @@ function initFirebase(){
       renderTopicList();
     });
     onValue(ref(db,'dms'),snap=>{renderDmList(snap.val()||{});});
+    onValue(ref(db,'groups/meta'),snap=>{allGroups=snap.val()||{};renderGroupList();});
     listenMentions();
     switchTopic('general');
   },200);
@@ -932,7 +965,7 @@ function isUnread(topicId){
 function markSeen(topicId){localStorage.setItem('seen_'+topicId,Date.now());}
 
 function switchTopic(topicId){
-  currentView='topic';currentTopicId=topicId;currentDmWith=null;
+  currentView='topic';currentTopicId=topicId;currentDmWith=null;currentGroupId=null;
   markSeen(topicId);
   clearMentionsForTopic(topicId);
   stopTypingIndicator();
@@ -980,7 +1013,7 @@ function createTopic(){
 // ── DMs ──────────────────────────────────────────────
 function dmKey(a,b){return [a,b].sort().join('__');}
 function openDm(userId,name,initials,color){
-  currentView='dm';currentDmWith={userId,name,initials,color};
+  currentView='dm';currentDmWith={userId,name,initials,color};currentGroupId=null;
   stopTypingIndicator();
   document.getElementById('paneTitle').innerHTML=
     `<div class="pane-dm-badge" style="background:${color}">${esc(initials)}</div>
@@ -1028,43 +1061,68 @@ function renderDmList(data){
 
 // ── ACTION ITEMS ─────────────────────────────────────
 function switchToActionItems(){
-  currentView='actions';currentDmWith=null;
+  currentView='actions';currentDmWith=null;currentGroupId=null;
   document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--amber)">✅</span><span class="pane-label">Action Items</span>`;
   document.getElementById('actionToolbar').style.display='none';
   document.getElementById('actionItemsRow').classList.add('action-active');
   clearFeed();
-  // Gather all action items from all topics
-  const items=[];
-  Object.entries(allEntries).forEach(([topicId,entries])=>{
-    Object.entries(entries).forEach(([id,e])=>{
-      if(e.isAction)items.push({id,e,topicId});
-    });
-  });
-  items.sort((a,b)=>(b.e.ts||0)-(a.e.ts||0));
+  renderTopicList();closeSheet();
+  if(!window._fb){renderActionItems({});return;}
+  const{db,ref,get}=window._fb;
+  get(ref(db,'topics')).then(snap=>{
+    const data=snap.val()||{};
+    // Merge fetched entries into allEntries cache
+    Object.entries(data).forEach(([tid,tdata])=>{if(tdata&&tdata.entries)allEntries[tid]=tdata.entries;});
+    renderActionItems(allEntries);
+    // Also check groups
+    return get(ref(db,'groups'));
+  }).then(snap=>{
+    if(!snap)return;
+    const gdata=snap.val()||{};
+    const groupEntries={};
+    Object.entries(gdata).forEach(([gid,gval])=>{if(gval&&gval.entries)groupEntries[gid]=gval.entries;});
+    renderActionItems(allEntries,groupEntries);
+  }).catch(()=>renderActionItems(allEntries));
+}
+function renderActionItems(topicEntries,groupEntries){
+  if(currentView!=='actions')return;
   const feed=document.getElementById('feed');
   const empty=document.getElementById('feedEmpty');
   const emptyMsg=document.getElementById('feedEmptyMsg');
+  clearFeed();
+  const items=[];
+  Object.entries(topicEntries).forEach(([topicId,entries])=>{
+    Object.entries(entries).forEach(([id,e])=>{if(e.isAction)items.push({id,e,topicId,source:'#'+(allTopics[topicId]?.title||topicId)});});
+  });
+  if(groupEntries){
+    Object.entries(groupEntries).forEach(([gid,entries])=>{
+      Object.entries(entries).forEach(([id,e])=>{if(e.isAction)items.push({id,e,topicId:gid,source:'👥'+(allGroups[gid]?.name||gid)});});
+    });
+  }
+  items.sort((a,b)=>(b.e.ts||0)-(a.e.ts||0));
   if(!items.length){empty.style.display='flex';emptyMsg.textContent='No action items yet. Tag a note with ✅ Action Item to track it here.';return;}
   empty.style.display='none';
-  // Show "Assigned to Me" first
-  const assignedToMe=items.filter(({e})=>e.assignedTo&&e.assignedTo.id===myId);
-  const mine=items.filter(({e})=>e.authorId===myId&&!(e.assignedTo&&e.assignedTo.id===myId));
-  const others=items.filter(({e})=>e.authorId!==myId&&!(e.assignedTo&&e.assignedTo.id===myId));
+  const getAssignees=e=>e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];
+  const assignedToMe=items.filter(({e})=>getAssignees(e).some(u=>u.id===myId));
+  const mine=items.filter(({e})=>e.authorId===myId&&!getAssignees(e).some(u=>u.id===myId));
+  const others=items.filter(({e})=>e.authorId!==myId&&!getAssignees(e).some(u=>u.id===myId));
   const addSection=(label,color,list)=>{
     if(!list.length)return;
     const hdr=document.createElement('div');
     hdr.style.cssText=`font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${color};padding:4px 2px 6px;`;
     hdr.textContent=label;feed.appendChild(hdr);
-    list.forEach(({id,e})=>{
+    list.forEach(({id,e,source})=>{
       const div=buildEntry(id,e,false);
       div.style.borderLeft=`3px solid ${color}`;div.style.paddingLeft='6px';
+      const src=document.createElement('div');
+      src.style.cssText='font-size:10px;color:var(--dim);margin-bottom:2px;';
+      src.textContent=source;div.prepend(src);
       feed.appendChild(div);
     });
   };
   addSection('Assigned to Me','#F0605A',assignedToMe);
   addSection('My Action Items','var(--amber)',mine);
   addSection('Team Action Items','var(--dim)',others);
-  renderTopicList();closeSheet();
 }
 function updateActionCount(){
   let count=0;
@@ -1297,7 +1355,7 @@ function buildEntry(id,e,isDm){
         <span class="entry-name" style="color:${e.color||'#888'}">${esc(name)}</span>
         <span class="entry-time">${time}${e.edited?' · edited':''}</span>
         ${e.isAction?'<span class="action-badge">✅ Action</span>':''}
-        ${e.assignedTo?`<span style="font-size:10px;background:var(--redbg);color:var(--red);border-radius:4px;padding:1px 6px;font-weight:700">→ ${esc(e.assignedTo.name)}</span>`:''}
+        ${(()=>{const a=e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];return a.map(u=>`<span style="font-size:10px;background:var(--redbg);color:var(--red);border-radius:4px;padding:1px 6px;font-weight:700">→ ${esc(u.name)}</span>`).join('');})()}
         ${e.pinned?'<span class="pin-badge">📌</span>':''}
         <div class="entry-actions">
           ${!isDm?`<button class="entry-act-btn reply-btn">↩ Reply</button>`:''}
@@ -1358,7 +1416,7 @@ function showEmojiPicker(entryId,anchor){
 function toggleReaction(entryId,emoji){
   if(!window._fb)return;
   const{db,ref,set,remove}=window._fb;
-  const basePath=currentView==='dm'?'dms/'+dmKey(myId,currentDmWith.userId):'topics/'+currentTopicId;
+  const basePath=currentBasePath();
   const ek='e'+(EMOJIS.indexOf(emoji)>=0?EMOJIS.indexOf(emoji):emoji.codePointAt(0).toString(16));
   const path=basePath+'/entries/'+entryId+'/reactions/'+ek+'/'+myId;
   // Check if already reacted
@@ -1378,7 +1436,7 @@ function deleteEntry(entryId){
   if(!confirm('Delete this note?'))return;
   if(!window._fb)return;
   const{db,ref,remove}=window._fb;
-  const path=currentView==='dm'?'dms/'+dmKey(myId,currentDmWith.userId)+'/entries/'+entryId:'topics/'+currentTopicId+'/entries/'+entryId;
+  const path=currentBasePath()+'/entries/'+entryId;
   remove(ref(db,path));
   document.querySelector(`.note-entry[data-id="${entryId}"]`)?.remove();
 }
@@ -1394,21 +1452,32 @@ function setReply(id,e){
 function cancelReply(){replyingTo=null;document.getElementById('replyBanner').classList.remove('show');}
 
 // ── ACTION TAG ────────────────────────────────────────
-function populateAssignSelect(){
-  const sel=document.getElementById('assignSelect');
-  if(!sel)return;
-  sel.innerHTML='<option value="">Nobody</option>';
-  Object.entries(allProfiles).filter(([id])=>id!==myId).forEach(([id,p])=>{
-    const opt=document.createElement('option');opt.value=id;opt.textContent=p.name;sel.appendChild(opt);
+function populateAssignPicker(){
+  assignedUsers=[];
+  const picker=document.getElementById('assignPicker');
+  if(!picker)return;
+  const profiles=Object.entries(allProfiles).filter(([id])=>id!==myId);
+  if(!profiles.length){picker.innerHTML='<span style="font-size:11px;color:var(--dim)">No teammates yet</span>';return;}
+  picker.innerHTML='<span style="font-size:11px;color:var(--amber);white-space:nowrap;flex-shrink:0">Assign:</span>';
+  profiles.forEach(([id,p])=>{
+    const chip=document.createElement('div');
+    chip.className='assign-chip';
+    chip.innerHTML=`<div class="ac-dot" style="background:${p.color}">${esc(p.initials)}</div><span>${esc(p.name.split(' ')[0])}</span>`;
+    chip.onclick=()=>{
+      const idx=assignedUsers.findIndex(u=>u.id===id);
+      if(idx>=0){assignedUsers.splice(idx,1);chip.classList.remove('selected');}
+      else{assignedUsers.push({id,name:p.name,initials:p.initials,color:p.color});chip.classList.add('selected');}
+    };
+    picker.appendChild(chip);
   });
 }
 function toggleActionTag(){
   isActionTag=!isActionTag;
   document.getElementById('actionBtn').classList.toggle('action-on',isActionTag);
   document.getElementById('actionBar').classList.toggle('show',isActionTag);
-  if(isActionTag)populateAssignSelect();
+  if(isActionTag)populateAssignPicker();
 }
-function cancelActionTag(){isActionTag=false;document.getElementById('actionBtn').classList.remove('action-on');document.getElementById('actionBar').classList.remove('show');}
+function cancelActionTag(){isActionTag=false;assignedUsers=[];document.getElementById('actionBtn').classList.remove('action-on');document.getElementById('actionBar').classList.remove('show');}
 
 // ── INLINE EDIT ───────────────────────────────────────
 function startInlineEdit(entryDiv,entryId,e){
@@ -1424,7 +1493,7 @@ function startInlineEdit(entryDiv,entryId,e){
     const newText=ta.value.trim();
     if(newText&&window._fb){
       const{db,ref,set}=window._fb;
-      const path=currentView==='dm'?'dms/'+dmKey(myId,currentDmWith.userId)+'/entries/'+entryId:'topics/'+currentTopicId+'/entries/'+entryId;
+      const path=currentBasePath()+'/entries/'+entryId;
       set(ref(db,path),{...e,text:newText,edited:true});
     }
     textEl.innerHTML=parseMentions(newText);textEl.style.display='';ta.remove();btns.remove();
@@ -1439,15 +1508,11 @@ function sendNote(){
   if(replyingTo){entry.replyTo={name:replyingTo.name,text:replyingTo.text.slice(0,120),color:replyingTo.color};cancelReply();}
   if(isActionTag){
     entry.isAction=true;
-    const sel=document.getElementById('assignSelect');
-    const assignId=sel&&sel.value;
-    if(assignId&&allProfiles[assignId]){
-      const p=allProfiles[assignId];
-      entry.assignedTo={id:assignId,name:p.name,initials:p.initials,color:p.color};
-    }
+    if(assignedUsers.length)entry.assignedTo=assignedUsers;
     cancelActionTag();
   }
   if(currentView==='dm'&&currentDmWith){pushDm(entry);}
+  else if(currentView==='group'&&currentGroupId){pushGroup(entry);}
   else{
     pushEntry(entry).then(ref=>{if(ref&&text)sendMentionNotifications(text,ref.key,currentTopicId);}).catch(()=>{});
   }
@@ -1457,6 +1522,69 @@ function sendNote(){
 }
 function pushEntry(entry){if(!window._fb)return Promise.resolve(null);const{db,ref,push}=window._fb;return push(ref(db,'topics/'+currentTopicId+'/entries'),entry);}
 function pushDm(entry){if(!window._fb||!currentDmWith)return;const{db,ref,push}=window._fb;push(ref(db,'dms/'+dmKey(myId,currentDmWith.userId)+'/entries'),entry);}
+function pushGroup(entry){if(!window._fb||!currentGroupId)return;const{db,ref,push}=window._fb;push(ref(db,'groups/'+currentGroupId+'/entries'),entry);}
+function currentBasePath(){
+  if(currentView==='dm')return 'dms/'+dmKey(myId,currentDmWith.userId);
+  if(currentView==='group')return 'groups/'+currentGroupId;
+  return 'topics/'+currentTopicId;
+}
+
+// ── GROUPS ────────────────────────────────────────────
+function showNewGroup(){
+  const m=document.getElementById('newGroupModal');
+  if(m){m.classList.add('show');setTimeout(()=>document.getElementById('newGroupInput').focus(),350);}
+}
+function closeNewGroup(){
+  document.getElementById('newGroupModal')?.classList.remove('show');
+  document.getElementById('newGroupInput').value='';
+}
+document.getElementById('newGroupInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')createGroup();});
+function createGroup(){
+  const inp=document.getElementById('newGroupInput');
+  const name=inp.value.trim();
+  if(!name)return;
+  if(!window._fb)return;
+  const{db,ref,set}=window._fb;
+  const id='g_'+Math.random().toString(36).slice(2,9);
+  set(ref(db,'groups/meta/'+id),{name,createdBy:myName,ts:Date.now()});
+  closeNewGroup();
+  setTimeout(()=>switchGroup(id),300);
+}
+function renderGroupList(){
+  const rows=Object.entries(allGroups).map(([id,g])=>{
+    const isActive=currentView==='group'&&currentGroupId===id;
+    return `<div class="nav-row${isActive?' active':''}" onclick="switchGroup('${esc(id)}')">
+      <span class="row-icon" style="color:var(--purple)">👥</span>
+      <span class="row-label">${esc(g.name)}</span>
+    </div>`;
+  }).join('')||'<div class="sidebar-empty">No groups yet</div>';
+  const mobileRows=Object.entries(allGroups).map(([id,g])=>{
+    return `<div class="nav-row" onclick="switchGroup('${esc(id)}');showMobileTab('notes')">
+      <span class="row-icon" style="color:var(--purple)">👥</span>
+      <span class="row-label">${esc(g.name)}</span>
+    </div>`;
+  }).join('')||'<div class="sidebar-empty">No groups yet</div>';
+  const gl=document.getElementById('groupList');if(gl)gl.innerHTML=rows;
+  const mgl=document.getElementById('mobileGroupList');if(mgl)mgl.innerHTML=mobileRows;
+}
+function switchGroup(groupId){
+  currentView='group';currentGroupId=groupId;currentDmWith=null;
+  stopTypingIndicator();cancelReply();cancelActionTag();
+  const g=allGroups[groupId]||{name:groupId};
+  document.getElementById('paneTitle').innerHTML=
+    `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
+  document.getElementById('actionToolbar').style.display='flex';
+  document.getElementById('actionItemsRow').classList.remove('action-active');
+  renderGroupList();renderTopicList();renderDmList(null);
+  clearFeed();
+  if(window._fb){
+    const{db,ref,onValue}=window._fb;
+    onValue(ref(db,'groups/'+groupId+'/entries'),snap=>{
+      if(currentView!=='group'||currentGroupId!==groupId)return;
+      renderFeed(snap.val()||{},false);
+    });
+  }
+}
 
 // ── FILES ─────────────────────────────────────────────
 document.getElementById('fileInput').addEventListener('change',async e=>{
@@ -1561,8 +1689,12 @@ function showMobileTab(tab){
   if(tab==='actions'){switchToActionItems();mobileTab='actions';}
   if(tab==='notes'){
     document.getElementById('actionItemsRow')?.classList.remove('action-active');
-    clearFeed();renderFeed(allEntries[currentTopicId]||{});
-    currentView='topic';
+    if(currentView==='group'&&currentGroupId){
+      // stay in current group view — feed already live
+    } else {
+      clearFeed();renderFeed(allEntries[currentTopicId]||{});
+      currentView='topic';
+    }
   }
   if(tab==='team'){renderTeam();renderMobileDms();}
   renderMobilePanels();
