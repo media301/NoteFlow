@@ -1672,9 +1672,12 @@ function renderFeed(data,isDm=false){
     }
     feed.appendChild(buildEntry(id,e,isDm));
   });
-  const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;
+  const fw=document.getElementById('feed');
+  if(fw){
+    fw.scrollTop=fw.scrollHeight;
+    setTimeout(()=>{fw.scrollTop-=1;requestAnimationFrame(()=>{fw.scrollTop=fw.scrollHeight;});},320);
+  }
   markSeen(currentTopicId);
-  forceIosRepaint();
 }
 function parseMentions(text){
   let h=esc(text);
