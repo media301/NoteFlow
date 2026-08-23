@@ -1421,7 +1421,7 @@ function renderActionItems(topicEntries,groupEntries){
   addSection('Assigned to Me','#F0605A',assignedToMe);
   addSection('My Action Items','var(--amber)',mine);
   addSection('Team Action Items','var(--dim)',others);
-  requestAnimationFrame(()=>{void feed.getBoundingClientRect();requestAnimationFrame(()=>{feed.scrollTop=0;});});
+  setTimeout(()=>{window.dispatchEvent(new Event('resize'));feed.scrollTop=0;},50);
 }
 function updateActionCount(){
   let count=0;
@@ -1624,7 +1624,7 @@ function renderFeed(data,isDm=false){
     }
     feed.appendChild(buildEntry(id,e,isDm));
   });
-  requestAnimationFrame(()=>{void feed.getBoundingClientRect();requestAnimationFrame(()=>{feed.scrollTop=feed.scrollHeight;});});
+  setTimeout(()=>{window.dispatchEvent(new Event('resize'));feed.scrollTop=feed.scrollHeight;},50);
   markSeen(currentTopicId);
 }
 function parseMentions(text){
@@ -2351,7 +2351,7 @@ function renderFiles(items){
       feed.appendChild(row);
     });
   });
-  requestAnimationFrame(()=>{void feed.getBoundingClientRect();requestAnimationFrame(()=>{feed.scrollTop=0;});});
+  setTimeout(()=>{window.dispatchEvent(new Event('resize'));feed.scrollTop=0;},50);
 }
 
 function toast(msg,ok){const el=document.getElementById('toast');if(toastT)clearTimeout(toastT);el.textContent=msg;el.className='show'+(ok?' ok':'');toastT=setTimeout(()=>{el.className='';},3000);}
