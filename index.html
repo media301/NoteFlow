@@ -1101,7 +1101,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.5';
+  const _ver='v1.6';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
 }
 function initPWAIcons(){
@@ -1247,7 +1247,7 @@ function renderTeam(){
   const teamRows=Object.entries(allProfiles).map(([id,p])=>{
     const isOnline=!!allUsers[id];
     const isMe=id===myId;
-    return `<div class="who-row"${!isMe?` onclick="openDm('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}',findExistingDmKey('${esc(id)}'))"`:''}>
+    return `<div class="who-row"${!isMe?` onclick="openDm('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}',findExistingDmKey('${esc(id)}'));showMobileTab('notes')"`:''}>
       <div style="position:relative;flex-shrink:0">
         <div class="who-badge" style="background:${p.color}">${esc(p.initials)}</div>
         ${isOnline?`<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;background:#1FD69C;border:1.5px solid var(--surf)"></div>`:''}
@@ -1268,7 +1268,7 @@ function renderOnline(recent){
   count.textContent=recent.length+' online';
   document.getElementById('teamCount').textContent=recent.length;
   const rows=recent.map(([id,u])=>
-    `<div class="who-row"${id!==myId?` onclick="openDm('${esc(id)}','${esc(u.name)}','${esc(u.initials)}','${esc(u.color)}',findExistingDmKey('${esc(id)}'))"`:''}>
+    `<div class="who-row"${id!==myId?` onclick="openDm('${esc(id)}','${esc(u.name)}','${esc(u.initials)}','${esc(u.color)}',findExistingDmKey('${esc(id)}'));showMobileTab('notes')"`:''}>
        <div class="who-badge" style="background:${u.color}">${esc(u.initials)}</div>
        <span class="who-name">${esc(u.name)}${id===myId?'<span class="who-you" style="margin-left:4px">you</span>':''}</span>
        ${id!==myId?'<span class="dm-hint">DM</span>':''}
@@ -1399,17 +1399,6 @@ function openDm(userId,name,initials,color,existingKey){
       window._dmDataCache=window._dmDataCache||{};
       window._dmDataCache[key]=snap.val()||{};
       window._lastFeedData={data:window._dmDataCache[key],isDm:true};
-      if('ontouchstart' in window){
-        const ep=document.querySelector('.editor-pane');
-        if(ep){
-          if(mobileTab!=='notes'){showMobileTab('notes');return;}
-          const _par=ep.parentNode,_nxt=ep.nextSibling;
-          _par.removeChild(ep);void ep.getBoundingClientRect();
-          renderFeed(window._lastFeedData.data,true);
-          requestAnimationFrame(()=>{_par.insertBefore(ep,_nxt);const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;});
-          return;
-        }
-      }
       renderFeed(window._lastFeedData.data,true);
     });
   }
@@ -2393,18 +2382,9 @@ function showMobileTab(tab){
     } else if(currentView==='dm'&&currentDmWith){
       const _k=currentDmWith.key;
       const ep=document.querySelector('.editor-pane');
-      if('ontouchstart' in window&&ep){
-        const _par=ep.parentNode,_nxt=ep.nextSibling;
-        _par.removeChild(ep);void ep.getBoundingClientRect();
-        clearFeed();
-        const _e=(window._dmDataCache||{})[_k]||allDmsData[_k]?.entries;
-        if(_e&&Object.keys(_e).length)renderFeed(_e,true);
-        requestAnimationFrame(()=>{_par.insertBefore(ep,_nxt);const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;});
-      } else {
-        clearFeed();
-        const _e=allDmsData[_k]?.entries;
-        if(_e&&Object.keys(_e).length)renderFeed(_e,true);
-      }
+      clearFeed();
+      const _e=(window._dmDataCache||{})[_k]||allDmsData[_k]?.entries;
+      if(_e&&Object.keys(_e).length)renderFeed(_e,true);
     } else if(currentView==='doc'&&currentDocId){
       // stay in current doc view — editor already live
     } else if(currentView==='files'||currentView==='actions'){
@@ -2441,7 +2421,7 @@ function renderMobileDms(){
     if(!myDms.length||!sec||!list){if(sec)sec.style.display='none';return;}
     sec.style.display='block';
     list.innerHTML=myDms.map(({key,otherId,other})=>{
-      return `<div class="nav-row" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}','${esc(key)}')">
+      return `<div class="nav-row" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}','${esc(key)}');showMobileTab('notes')">
         <div style="background:${other.color};width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;flex-shrink:0">${esc(other.initials)}</div>
         <span class="row-label">${esc(other.name)}</span>
       </div>`;
