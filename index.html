@@ -1346,12 +1346,16 @@ function switchToActionItems(){
   renderTopicList();closeSheet();
   if(!window._fb){renderActionItems({});return;}
   const{db,ref,get}=window._fb;
-  Promise.all([get(ref(db,'topics')),get(ref(db,'groups'))]).then(([ts,gs])=>{
-    const tdata=ts.val()||{};
-    Object.entries(tdata).forEach(([tid,tv])=>{if(tv&&tv.entries)allEntries[tid]=tv.entries;});
+  const topicIds=Object.keys(allTopics);
+  const groupIds=[...myGroupIds];
+  const tPromises=topicIds.map(tid=>get(ref(db,'topics/'+tid+'/entries')).then(s=>({tid,data:s.val()||{}})));
+  const gPromises=groupIds.map(gid=>get(ref(db,'groups/'+gid+'/entries')).then(s=>({gid,data:s.val()||{}})));
+  Promise.all([...tPromises,...gPromises]).then(results=>{
     const groupEntries={};
-    const gdata=gs.val()||{};
-    Object.entries(gdata).forEach(([gid,gv])=>{if(gv&&gv.entries)groupEntries[gid]=gv.entries;});
+    results.forEach(r=>{
+      if(r.tid)allEntries[r.tid]=r.data;
+      else groupEntries[r.gid]=r.data;
+    });
     renderActionItems(allEntries,groupEntries);
   }).catch(()=>renderActionItems(allEntries));
 }
@@ -2257,21 +2261,24 @@ function switchToFiles(){
   clearFeed();renderTopicList();closeSheet();
   if(!window._fb){renderFiles([]);return;}
   const{db,ref,get}=window._fb;
-  Promise.all([get(ref(db,'topics')),get(ref(db,'groups'))]).then(([ts,gs])=>{
+  const topicIds=Object.keys(allTopics);
+  const groupIds=[...myGroupIds];
+  const tPromises=topicIds.map(tid=>get(ref(db,'topics/'+tid+'/entries')).then(s=>({tid,data:s.val()||{}})));
+  const gPromises=groupIds.map(gid=>get(ref(db,'groups/'+gid+'/entries')).then(s=>({gid,data:s.val()||{}})));
+  Promise.all([...tPromises,...gPromises]).then(results=>{
     const items=[];
-    const tdata=ts.val()||{};
-    Object.entries(tdata).forEach(([tid,tv])=>{
-      const title=(allTopics[tid]&&allTopics[tid].title)||tid;
-      Object.entries(tv.entries||{}).forEach(([,e])=>{
-        if(e.type==='file'||e.type==='image')items.push({...e,source:'#'+title,sourceId:tid,sourceType:'topic'});
-      });
-    });
-    const gdata=gs.val()||{};
-    Object.entries(gdata).forEach(([gid,gv])=>{
-      const name=(allGroups[gid]&&allGroups[gid].name)||gid;
-      Object.entries(gv.entries||{}).forEach(([,e])=>{
-        if(e.type==='file'||e.type==='image')items.push({...e,source:'👥'+name,sourceId:gid,sourceType:'group'});
-      });
+    results.forEach(r=>{
+      if(r.tid){
+        const title=(allTopics[r.tid]&&allTopics[r.tid].title)||r.tid;
+        Object.values(r.data).forEach(e=>{
+          if((e.type==='file'||e.type==='image')&&e.src)items.push({...e,source:'#'+title});
+        });
+      } else {
+        const name=(allGroups[r.gid]&&allGroups[r.gid].name)||r.gid;
+        Object.values(r.data).forEach(e=>{
+          if((e.type==='file'||e.type==='image')&&e.src)items.push({...e,source:'👥'+name});
+        });
+      }
     });
     items.sort((a,b)=>(b.ts||0)-(a.ts||0));
     renderFiles(items);
