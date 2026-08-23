@@ -1108,7 +1108,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.7';
+  const _ver='v1.8';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
