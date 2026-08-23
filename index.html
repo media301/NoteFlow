@@ -187,7 +187,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 
 /* FEED */
 .feed-scroll{flex:1;overflow-y:auto;padding:1rem 1.25rem;display:flex;
-             flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch;min-height:0;}
+             flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch;min-height:0;height:0;}
 .feed-scroll::-webkit-scrollbar{width:3px;}
 .feed-scroll::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:3px;}
 .feed-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -1420,7 +1420,7 @@ function renderActionItems(topicEntries,groupEntries){
   addSection('Assigned to Me','#F0605A',assignedToMe);
   addSection('My Action Items','var(--amber)',mine);
   addSection('Team Action Items','var(--dim)',others);
-  requestAnimationFrame(()=>{feed.scrollTop=0;});
+  requestAnimationFrame(()=>{void feed.getBoundingClientRect();requestAnimationFrame(()=>{feed.scrollTop=0;});});
 }
 function updateActionCount(){
   let count=0;
@@ -1623,7 +1623,7 @@ function renderFeed(data,isDm=false){
     }
     feed.appendChild(buildEntry(id,e,isDm));
   });
-  requestAnimationFrame(()=>{feed.scrollTop=feed.scrollHeight;});
+  requestAnimationFrame(()=>{void feed.getBoundingClientRect();requestAnimationFrame(()=>{feed.scrollTop=feed.scrollHeight;});});
   markSeen(currentTopicId);
 }
 function parseMentions(text){
@@ -2350,7 +2350,7 @@ function renderFiles(items){
       feed.appendChild(row);
     });
   });
-  requestAnimationFrame(()=>{feed.scrollTop=0;});
+  requestAnimationFrame(()=>{void feed.getBoundingClientRect();requestAnimationFrame(()=>{feed.scrollTop=0;});});
 }
 
 function toast(msg,ok){const el=document.getElementById('toast');if(toastT)clearTimeout(toastT);el.textContent=msg;el.className='show'+(ok?' ok':'');toastT=setTimeout(()=>{el.className='';},3000);}
