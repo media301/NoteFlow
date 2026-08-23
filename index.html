@@ -1101,7 +1101,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v1.4';
+  const _ver='v1.5';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
 }
 function initPWAIcons(){
@@ -1399,8 +1399,16 @@ function openDm(userId,name,initials,color,existingKey){
       window._dmDataCache=window._dmDataCache||{};
       window._dmDataCache[key]=snap.val()||{};
       window._lastFeedData={data:window._dmDataCache[key],isDm:true};
-      if('ontouchstart' in window&&mobileTab!=='notes'){
-        showMobileTab('notes');return;
+      if('ontouchstart' in window){
+        const ep=document.querySelector('.editor-pane');
+        if(ep){
+          if(mobileTab!=='notes'){showMobileTab('notes');return;}
+          const _par=ep.parentNode,_nxt=ep.nextSibling;
+          _par.removeChild(ep);void ep.getBoundingClientRect();
+          renderFeed(window._lastFeedData.data,true);
+          requestAnimationFrame(()=>{_par.insertBefore(ep,_nxt);const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;});
+          return;
+        }
       }
       renderFeed(window._lastFeedData.data,true);
     });
@@ -2386,11 +2394,12 @@ function showMobileTab(tab){
       const _k=currentDmWith.key;
       const ep=document.querySelector('.editor-pane');
       if('ontouchstart' in window&&ep){
-        ep.style.display='none';
+        const _par=ep.parentNode,_nxt=ep.nextSibling;
+        _par.removeChild(ep);void ep.getBoundingClientRect();
         clearFeed();
         const _e=(window._dmDataCache||{})[_k]||allDmsData[_k]?.entries;
         if(_e&&Object.keys(_e).length)renderFeed(_e,true);
-        requestAnimationFrame(()=>{ep.style.display='';const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;});
+        requestAnimationFrame(()=>{_par.insertBefore(ep,_nxt);const fw=document.getElementById('feed');if(fw)fw.scrollTop=fw.scrollHeight;});
       } else {
         clearFeed();
         const _e=allDmsData[_k]?.entries;
