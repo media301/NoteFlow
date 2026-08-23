@@ -544,6 +544,9 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <span class="pane-hash">#</span><span class="pane-label">general</span>
       </div>
       <div class="pane-actions">
+        <button class="pane-act-btn" id="groupMembersBtn" style="display:none" onclick="showGroupMembers(currentGroupId)">
+          👤 Members
+        </button>
         <button class="pane-act-btn" onclick="exportTopic()" title="Export notes">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
@@ -715,6 +718,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <div style="display:flex;align-items:center;gap:8px">
         <span id="gmPassText" style="font-weight:600;font-family:monospace;flex:1"></span>
         <button class="entry-act-btn" onclick="copyGroupPass()" style="padding:3px 8px">Copy</button>
+        <button class="entry-act-btn" onclick="shareGroupPass()" style="padding:3px 8px">Share</button>
       </div>
     </div>
     <div id="gmMemberList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
@@ -1086,6 +1090,7 @@ function markSeen(topicId){localStorage.setItem('seen_'+topicId,Date.now());}
 
 function switchTopic(topicId){
   currentView='topic';currentTopicId=topicId;currentDmWith=null;currentGroupId=null;
+  document.getElementById('groupMembersBtn').style.display='none';
   markSeen(topicId);
   clearMentionsForTopic(topicId);
   stopTypingIndicator();
@@ -1136,6 +1141,7 @@ function dmKey(a,b){return [a,b].sort().join('__');}
 function openDm(userId,name,initials,color,existingKey){
   const key=existingKey||dmKey(myId,userId);
   currentView='dm';currentDmWith={userId,name,initials,color,key};currentGroupId=null;
+  document.getElementById('groupMembersBtn').style.display='none';
   localStorage.setItem('seen_dm_'+key,Date.now());
   stopTypingIndicator();
   document.getElementById('paneTitle').innerHTML=
@@ -1773,10 +1779,9 @@ function switchGroup(groupId){
   currentView='group';currentGroupId=groupId;currentDmWith=null;
   stopTypingIndicator();cancelReply();cancelActionTag();
   const g=allGroups[groupId]||{name:groupId};
-  const isAdmin=g.creatorId===myId||g.createdBy===myName;
   document.getElementById('paneTitle').innerHTML=
-    `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`+
-    `<button class="tool-btn" style="margin-left:auto;font-size:12px;padding:4px 8px" onclick="showGroupMembers('${esc(groupId)}')">👤 Members</button>`;
+    `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
+  document.getElementById('groupMembersBtn').style.display=g.passphrase?'':'none';
   document.getElementById('actionToolbar').style.display='flex';
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
@@ -1831,6 +1836,16 @@ function closeGroupMembers(){document.getElementById('groupMembersModal')?.class
 function copyGroupPass(){
   const p=document.getElementById('gmPassText').textContent;
   navigator.clipboard.writeText(p).then(()=>toast('Passphrase copied!',true));
+}
+function shareGroupPass(){
+  const g=allGroups[_gmGroupId]||{};
+  const p=document.getElementById('gmPassText').textContent;
+  const msg=`Join my "${g.name}" group on NoteFlow!\n\n1. Open ${location.href}\n2. Tap the 🔑 button next to Groups\n3. Enter passphrase: ${p}`;
+  if(/iPhone|iPad|Android/i.test(navigator.userAgent)&&navigator.share){
+    navigator.share({title:'Join '+g.name+' on NoteFlow',text:msg});
+  } else {
+    navigator.clipboard.writeText(msg).then(()=>toast('Invite text copied!',true));
+  }
 }
 async function updateGroupPass(){
   const np=document.getElementById('gmNewPass').value.trim();
