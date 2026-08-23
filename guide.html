@@ -1,1 +1,547 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoteFlow Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F5F6FF;
+  --surf: #FFFFFF;
+  --card: #ECEEFF;
+  --border: #D8DCFF;
+  --text: #1A1C2E;
+  --dim: #6B718F;
+  --ac: #6C7BFF;
+  --ac2: #1FD69C;
+  --ac-bg: #EEF0FF;
+  --phone-bg: #0D0F14;
+  --phone-surf: #161820;
+  --phone-card: #1E2028;
+  --phone-ac: #7B8CFF;
+  --phone-green: #1FD69C;
+  --phone-text: #E8EAF0;
+  --phone-dim: #6B7090;
+  --shadow: 0 2px 16px rgba(108,123,255,.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D0F1A;
+    --surf: #13151F;
+    --card: #1A1C2A;
+    --border: #252838;
+    --text: #E8EAFF;
+    --dim: #8890B8;
+    --ac: #7B8CFF;
+    --ac2: #1FD69C;
+    --ac-bg: #1E2040;
+    --shadow: 0 2px 16px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D0F1A;
+  --surf: #13151F;
+  --card: #1A1C2A;
+  --border: #252838;
+  --text: #E8EAFF;
+  --dim: #8890B8;
+  --ac: #7B8CFF;
+  --ac2: #1FD69C;
+  --ac-bg: #1E2040;
+  --shadow: 0 2px 16px rgba(0,0,0,.4);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  padding: 0 0 4rem;
+}
+.hero {
+  background: linear-gradient(135deg, #5060E8 0%, #7B8CFF 50%, #1FD69C 100%);
+  padding: 3rem 1.5rem 2.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 70% 30%, rgba(255,255,255,.12) 0%, transparent 60%);
+}
+.hero-logo { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -.02em; position: relative; }
+.hero-logo span { opacity: .7; font-weight: 500; }
+.hero-sub { margin-top: .5rem; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.05rem; color: rgba(255,255,255,.85); font-weight: 500; position: relative; }
+.hero-tag { display: inline-block; margin-top: 1.2rem; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3); color: #fff; font-size: .8rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: .35rem .9rem; border-radius: 99px; position: relative; }
+.container { max-width: 680px; margin: 0 auto; padding: 0 1.25rem; }
+.section-eyebrow { display: flex; align-items: center; gap: .75rem; margin: 2.5rem 0 1rem; }
+.section-num { width: 32px; height: 32px; border-radius: 50%; background: var(--ac); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: .85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.section-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.2rem; font-weight: 700; letter-spacing: -.01em; color: var(--text); text-wrap: balance; }
+.card { background: var(--surf); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+.card p { color: var(--dim); font-size: .95rem; line-height: 1.65; }
+.card p + p { margin-top: .6rem; }
+.card strong { color: var(--text); font-weight: 600; }
+.step-row { display: flex; gap: 1rem; align-items: flex-start; padding: .75rem 0; border-bottom: 1px solid var(--border); }
+.step-row:last-child { border-bottom: none; }
+.step-bubble { width: 26px; height: 26px; border-radius: 50%; background: var(--ac-bg); color: var(--ac); font-family: 'Plus Jakarta Sans', sans-serif; font-size: .8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .1rem; }
+.step-row p { color: var(--dim); font-size: .9rem; line-height: 1.6; }
+.step-row strong { color: var(--text); font-size: .95rem; display: block; margin-bottom: .1rem; font-weight: 600; }
+.passphrase-box { background: var(--ac-bg); border: 1.5px solid var(--ac); border-radius: 10px; padding: .75rem 1rem; margin: .75rem 0; display: flex; align-items: center; gap: .75rem; }
+.passphrase-box .key-icon { font-size: 1.4rem; }
+.passphrase-box .key-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); font-weight: 600; }
+.passphrase-box .key-value { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--ac); letter-spacing: .04em; }
+.tip { background: var(--card); border-left: 3px solid var(--ac2); border-radius: 0 10px 10px 0; padding: .75rem 1rem; margin: .75rem 0; font-size: .88rem; color: var(--dim); line-height: 1.6; }
+.tip strong { color: var(--text); }
+.mockup-wrap { display: flex; justify-content: center; margin: 1.25rem 0 .5rem; }
+.phone { width: 220px; background: var(--phone-bg); border-radius: 28px; border: 2.5px solid #2A2C38; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,.35); position: relative; font-size: 10px; flex-shrink: 0; }
+.phone-notch { background: #000; height: 20px; display: flex; align-items: center; justify-content: center; }
+.phone-notch-bar { width: 60px; height: 5px; background: #222; border-radius: 3px; }
+.phone-screen { background: var(--phone-bg); min-height: 320px; position: relative; overflow: hidden; }
+.ph-header { background: #0F1118; padding: 5px 7px; display: flex; align-items: center; gap: 4px; border-bottom: 1px solid #1E2028; }
+.ph-logo-mark { width: 18px; height: 18px; border-radius: 4px; background: #0D1410; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 6px rgba(31,214,156,.3); }
+.ph-search { flex: 1; background: #1E2028; border-radius: 6px; height: 17px; display: flex; align-items: center; padding: 0 5px; gap: 3px; min-width: 0; }
+.ph-search-text { font-size: 7px; color: var(--phone-dim); white-space: nowrap; overflow: hidden; font-family: 'Inter', sans-serif; }
+.ph-me-pill { display: flex; align-items: center; gap: 3px; border: 1px solid #2A2A3A; border-radius: 12px; padding: 2px 6px 2px 2px; flex-shrink: 0; }
+.ph-me-dot { width: 16px; height: 16px; border-radius: 50%; background: #F5A342; display: flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 800; color: #000; flex-shrink: 0; }
+.ph-me-name { font-size: 7px; color: var(--phone-text); font-family: 'Inter', sans-serif; max-width: 38px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-content { padding: 8px; flex: 1; }
+.ph-section-label { font-size: 8px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--phone-dim); margin: 6px 0 4px; }
+.ph-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 7px; margin-bottom: 2px; cursor: default; }
+.ph-row.active { background: rgba(123,140,255,.15); }
+.ph-row-icon { font-size: 9px; color: var(--phone-ac); width: 12px; text-align: center; }
+.ph-row-label { font-size: 9px; color: var(--phone-text); font-family: 'Inter', sans-serif; }
+.ph-badge { margin-left: auto; width: 7px; height: 7px; border-radius: 50%; background: var(--phone-ac); }
+.ph-tab-bar { display: flex; background: #0F1118; border-top: 1px solid #1E2028; padding: 6px 0 10px; }
+.ph-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 7px; color: var(--phone-dim); font-family: 'Inter', sans-serif; }
+.ph-tab.active { color: var(--phone-ac); }
+.ph-tab svg { width: 13px; height: 13px; }
+.ph-feed { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+.ph-msg { background: var(--phone-card); border-radius: 10px; padding: 6px 8px; }
+.ph-msg-name { font-size: 8px; font-weight: 700; color: var(--phone-ac); margin-bottom: 2px; font-family: 'Plus Jakarta Sans', sans-serif; }
+.ph-msg-text { font-size: 8px; color: var(--phone-text); line-height: 1.4; font-family: 'Inter', sans-serif; }
+.ph-msg.me { background: rgba(123,140,255,.2); border-radius: 10px 10px 3px 10px; margin-left: 20px; }
+.ph-toolbar { background: #0F1118; border-top: 1px solid #1E2028; padding: 3px 5px; display: flex; flex-direction: column; gap: 3px; }
+.ph-toolbar-row { display: flex; gap: 3px; align-items: center; }
+.ph-tool-btn { background: var(--phone-card); border-radius: 8px; padding: 3px 6px; font-size: 7px; color: var(--phone-text); font-family: 'Inter', sans-serif; white-space: nowrap; border: 1px solid #2A2A3A; }
+.ph-tool-btn-sm { background: var(--phone-card); border-radius: 6px; padding: 2px 5px; font-size: 7px; color: var(--phone-text); font-family: 'Inter', sans-serif; border: 1px solid #2A2A3A; }
+.ph-compose { background: #0F1118; padding: 4px 8px 6px; display: flex; align-items: center; gap: 6px; }
+.ph-compose-input { flex: 1; background: #1E2028; border-radius: 18px; height: 26px; display: flex; align-items: center; padding: 0 10px; font-size: 8px; color: var(--phone-dim); font-family: 'Inter', sans-serif; border: 1px solid #2A2A3A; }
+.ph-send { width: 26px; height: 26px; border-radius: 50%; background: var(--phone-green); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #000; font-weight: 700; flex-shrink: 0; }
+.ph-modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: flex-end; }
+.ph-modal { background: var(--phone-surf); border-radius: 16px 16px 0 0; padding: 12px 12px 16px; width: 100%; }
+.ph-modal-title { font-size: 10px; font-weight: 800; color: var(--phone-text); font-family: 'Plus Jakarta Sans', sans-serif; margin-bottom: 8px; }
+.ph-modal-input { background: var(--phone-card); border-radius: 8px; height: 24px; width: 100%; margin-bottom: 6px; display: flex; align-items: center; padding: 0 8px; font-size: 8px; color: var(--phone-dim); font-family: 'Inter', sans-serif; }
+.ph-modal-btn { background: var(--phone-ac); border-radius: 8px; height: 24px; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; }
+.callout-row { display: flex; gap: 1rem; align-items: flex-start; margin-top: 1rem; }
+.callout-num { width: 22px; height: 22px; border-radius: 50%; background: var(--ac); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: .75rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .15rem; }
+.callout-text { font-size: .88rem; color: var(--dim); line-height: 1.6; }
+.callout-text strong { color: var(--text); font-weight: 600; }
+.format-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: .75rem; }
+.format-card { background: var(--card); border-radius: 10px; padding: .75rem; }
+.format-btn-demo { display: inline-flex; align-items: center; justify-content: center; background: var(--surf); border: 1px solid var(--border); border-radius: 6px; padding: .25rem .6rem; font-size: .85rem; font-weight: 700; color: var(--text); margin-bottom: .5rem; font-family: 'Plus Jakarta Sans', sans-serif; }
+.format-result { font-size: .85rem; color: var(--dim); }
+.platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: .75rem; }
+.platform-card { background: var(--card); border-radius: 12px; padding: 1rem; }
+.platform-name { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: .95rem; margin-bottom: .5rem; }
+.platform-steps { font-size: .82rem; color: var(--dim); line-height: 1.7; }
+.platform-steps span { display: block; }
+.divider { height: 1px; background: var(--border); margin: 2rem 0; }
+@media (max-width: 480px) {
+  .format-grid { grid-template-columns: 1fr; }
+  .platform-grid { grid-template-columns: 1fr; }
+  .callout-row { flex-direction: column; gap: .4rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-logo">NoteFlow <span>by Global Archery</span></div>
+  <div class="hero-sub">Your team's shared workspace — notes, chats, and action items in one place</div>
+  <div class="hero-tag">Quick Start Guide</div>
+</div>
+
+<div class="container">
+
+  <!-- SECTION 1 -->
+  <div class="section-eyebrow">
+    <div class="section-num">1</div>
+    <div class="section-title">Opening NoteFlow for the First Time</div>
+  </div>
+  <div class="card">
+    <div class="step-row">
+      <div class="step-bubble">1</div>
+      <div><strong>Open the link</strong><p>Tap the link your team leader sent you. It opens in your phone's browser — no app store needed.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-bubble">2</div>
+      <div>
+        <strong>Enter the team passphrase</strong>
+        <p>You'll be asked for a passphrase to make sure only your team can get in. Your team leader will give you this.</p>
+        <div class="passphrase-box">
+          <div class="key-icon">🔐</div>
+          <div>
+            <div class="key-label">Example passphrase</div>
+            <div class="key-value">Group20</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step-row">
+      <div class="step-bubble">3</div>
+      <div><strong>Enter your name</strong><p>Type your first and last name. This is how your teammates will see you. <strong>Use the same name every time</strong> — this keeps your messages connected across devices.</p></div>
+    </div>
+    <div class="tip"><strong>Tip:</strong> Add NoteFlow to your home screen so it opens like an app (see section 10 for how).</div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="section-eyebrow">
+    <div class="section-num">2</div>
+    <div class="section-title">Finding Your Way Around</div>
+  </div>
+  <div class="card">
+    <p>On your phone, four buttons run along the bottom of the screen. Each one takes you somewhere different.</p>
+    <div class="mockup-wrap">
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-notch-bar"></div></div>
+        <div class="phone-screen">
+          <div class="ph-header">
+            <div class="ph-logo-mark"><svg width="12" height="12" viewBox="0 0 80 80" fill="none"><path d="M56 20 C56 12 48 8 42 8 C36 8 28 12 28 20 L28 52 C28 64 52 64 52 52 L52 24 C52 18 36 18 36 24 L36 52" stroke="#7B8CFF" stroke-width="9" fill="none" stroke-linecap="round"/></svg></div>
+            <div class="ph-search"><span class="ph-search-text">🔍 Search notes…</span></div>
+            <div class="ph-me-pill"><div class="ph-me-dot">JJ</div><span class="ph-me-name">John J…</span></div>
+          </div>
+          <div style="height:220px;background:var(--phone-bg);display:flex;align-items:center;justify-content:center;"><div style="font-size:28px;opacity:.25">📋</div></div>
+          <div class="ph-tab-bar">
+            <div class="ph-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Notes</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Topics</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Actions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout-row"><div class="callout-num">📋</div><div class="callout-text"><strong>Notes</strong> — your current conversation. This is where you read and write messages.</div></div>
+    <div class="callout-row"><div class="callout-num">☰</div><div class="callout-text"><strong>Topics</strong> — your channels and groups. Switch between them here.</div></div>
+    <div class="callout-row"><div class="callout-num">👥</div><div class="callout-text"><strong>Team</strong> — see who's online and send private messages to someone.</div></div>
+    <div class="callout-row"><div class="callout-num">✅</div><div class="callout-text"><strong>Actions</strong> — your personal to-do list of items assigned to you.</div></div>
+  </div>
+
+  <!-- SECTION 3 -->
+  <div class="section-eyebrow">
+    <div class="section-num">3</div>
+    <div class="section-title">Reading and Posting Messages</div>
+  </div>
+  <div class="card">
+    <div class="mockup-wrap">
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-notch-bar"></div></div>
+        <div class="phone-screen">
+          <div class="ph-header">
+            <div class="ph-logo-mark"><svg width="12" height="12" viewBox="0 0 80 80" fill="none"><path d="M56 20 C56 12 48 8 42 8 C36 8 28 12 28 20 L28 52 C28 64 52 64 52 52 L52 24 C52 18 36 18 36 24 L36 52" stroke="#7B8CFF" stroke-width="9" fill="none" stroke-linecap="round"/></svg></div>
+            <div style="font-size:9px;color:var(--phone-ac);font-weight:700;flex:1"># General</div>
+            <div class="ph-me-pill"><div class="ph-me-dot">JJ</div><span class="ph-me-name">John J…</span></div>
+          </div>
+          <div class="ph-feed">
+            <div class="ph-msg"><div class="ph-msg-name">Lisa</div><div class="ph-msg-text">Good morning everyone! 👋</div></div>
+            <div class="ph-msg"><div class="ph-msg-name">Duke</div><div class="ph-msg-text">Morning! Ready for the meeting at 10?</div></div>
+            <div class="ph-msg me"><div class="ph-msg-text">Yes, I'll be there!</div></div>
+          </div>
+          <div class="ph-toolbar">
+            <div class="ph-toolbar-row">
+              <div class="ph-tool-btn">🎙 Voice Dictate</div>
+              <div class="ph-tool-btn">📎 Attach File</div>
+              <div class="ph-tool-btn">✅ Action Item</div>
+            </div>
+            <div class="ph-toolbar-row">
+              <div class="ph-tool-btn-sm" style="font-weight:700">B</div>
+              <div class="ph-tool-btn-sm" style="font-style:italic">I</div>
+              <div class="ph-tool-btn-sm">• List</div>
+              <div class="ph-tool-btn-sm" style="font-family:monospace">{ }</div>
+              <div class="ph-tool-btn-sm">↵</div>
+            </div>
+          </div>
+          <div class="ph-compose"><div class="ph-compose-input">Type a note and press Enter…</div><div class="ph-send">▶</div></div>
+          <div class="ph-tab-bar">
+            <div class="ph-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Notes</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Topics</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Actions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout-row"><div class="callout-num">1</div><div class="callout-text">Tap the <strong>text box</strong> at the bottom. Your keyboard will appear.</div></div>
+    <div class="callout-row"><div class="callout-num">2</div><div class="callout-text">Type your message.</div></div>
+    <div class="callout-row"><div class="callout-num">3</div><div class="callout-text">Tap the <strong>green arrow</strong> ▶ to send. Your message appears with your name.</div></div>
+    <div class="tip"><strong>Tip:</strong> To switch topics (channels), tap the <strong>Topics</strong> tab, then tap the channel you want — like #General or #Improvements.</div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="section-eyebrow">
+    <div class="section-num">4</div>
+    <div class="section-title">Sending a Private Message</div>
+  </div>
+  <div class="card">
+    <p>Direct messages are private — only you and the other person can see them.</p>
+    <div class="mockup-wrap">
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-notch-bar"></div></div>
+        <div class="phone-screen">
+          <div class="ph-header">
+            <div class="ph-logo-mark"><svg width="12" height="12" viewBox="0 0 80 80" fill="none"><path d="M56 20 C56 12 48 8 42 8 C36 8 28 12 28 20 L28 52 C28 64 52 64 52 52 L52 24 C52 18 36 18 36 24 L36 52" stroke="#7B8CFF" stroke-width="9" fill="none" stroke-linecap="round"/></svg></div>
+            <div style="font-size:9px;color:var(--phone-ac);font-weight:700;flex:1">Team</div>
+            <div class="ph-me-pill"><div class="ph-me-dot">JJ</div><span class="ph-me-name">John J…</span></div>
+          </div>
+          <div class="ph-content">
+            <div class="ph-section-label">Members</div>
+            <div class="ph-row active">
+              <div style="width:18px;height:18px;border-radius:50%;background:#1FD69C;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#000;flex-shrink:0">L</div>
+              <div class="ph-row-label">Lisa</div>
+              <div style="font-size:7px;color:var(--phone-dim);margin-left:auto">online</div>
+            </div>
+            <div class="ph-row">
+              <div style="width:18px;height:18px;border-radius:50%;background:#FF6B6B;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;flex-shrink:0">D</div>
+              <div class="ph-row-label">Duke</div>
+              <div style="font-size:7px;color:var(--phone-dim);margin-left:auto">offline</div>
+            </div>
+            <div class="ph-row">
+              <div style="width:18px;height:18px;border-radius:50%;background:#FFB347;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#000;flex-shrink:0">M</div>
+              <div class="ph-row-label">Mike</div>
+              <div style="font-size:7px;color:var(--phone-dim);margin-left:auto">offline</div>
+            </div>
+          </div>
+          <div class="ph-tab-bar">
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Notes</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Topics</div>
+            <div class="ph-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Actions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step-row"><div class="step-bubble">1</div><div><strong>Tap the Team tab</strong><p>You'll see a list of everyone on your team.</p></div></div>
+    <div class="step-row"><div class="step-bubble">2</div><div><strong>Tap the person's name</strong><p>This opens a private chat with just the two of you.</p></div></div>
+    <div class="step-row"><div class="step-bubble">3</div><div><strong>Type and send</strong><p>Same as a regular message — type, tap the green arrow.</p></div></div>
+    <div class="tip"><strong>Unread messages</strong> show a colored dot next to the person's name in the Team tab so you know when you have something new.</div>
+  </div>
+
+  <!-- SECTION 5 -->
+  <div class="section-eyebrow">
+    <div class="section-num">5</div>
+    <div class="section-title">Joining a Private Group</div>
+  </div>
+  <div class="card">
+    <p>Private groups are invite-only. Your team leader will send you a group passphrase to join.</p>
+    <div class="mockup-wrap">
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-notch-bar"></div></div>
+        <div class="phone-screen">
+          <div class="ph-header">
+            <div class="ph-logo-mark"><svg width="12" height="12" viewBox="0 0 80 80" fill="none"><path d="M56 20 C56 12 48 8 42 8 C36 8 28 12 28 20 L28 52 C28 64 52 64 52 52 L52 24 C52 18 36 18 36 24 L36 52" stroke="#7B8CFF" stroke-width="9" fill="none" stroke-linecap="round"/></svg></div>
+            <div style="font-size:9px;color:var(--phone-ac);font-weight:700;flex:1">Topics</div>
+            <div class="ph-me-pill"><div class="ph-me-dot">JJ</div><span class="ph-me-name">John J…</span></div>
+          </div>
+          <div class="ph-content">
+            <div class="ph-section-label">Topics</div>
+            <div class="ph-row"><div class="ph-row-icon">#</div><div class="ph-row-label">General</div></div>
+            <div class="ph-row"><div class="ph-row-icon">#</div><div class="ph-row-label">Improvements</div></div>
+            <div style="display:flex;align-items:center;margin-top:8px;margin-bottom:4px;">
+              <div class="ph-section-label" style="margin:0;flex:1">Groups</div>
+              <div style="font-size:14px;margin-right:4px">🔑</div>
+              <div style="font-size:14px">＋</div>
+            </div>
+            <div class="ph-row"><div class="ph-row-icon" style="font-size:11px">👥</div><div class="ph-row-label">Group 20</div></div>
+          </div>
+          <div class="ph-modal-overlay">
+            <div class="ph-modal">
+              <div class="ph-modal-title">🔑 Join a Group</div>
+              <div class="ph-modal-input">Enter passphrase…</div>
+              <div class="ph-modal-btn">Join Group →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step-row"><div class="step-bubble">1</div><div><strong>Tap the Topics tab</strong><p>Scroll down to the Groups section.</p></div></div>
+    <div class="step-row"><div class="step-bubble">2</div><div><strong>Tap the 🔑 key button</strong><p>It's the small key icon next to the word "Groups."</p></div></div>
+    <div class="step-row"><div class="step-bubble">3</div><div><strong>Enter the passphrase</strong><p>Type the passphrase your team leader shared with you, then tap <strong>Join Group →</strong></p></div></div>
+    <div class="tip"><strong>Done!</strong> The group appears in your sidebar and you can start chatting immediately.</div>
+  </div>
+
+  <!-- SECTION 6 -->
+  <div class="section-eyebrow">
+    <div class="section-num">6</div>
+    <div class="section-title">Formatting Your Messages</div>
+  </div>
+  <div class="card">
+    <p>A small toolbar sits above the text box. Tap any button to format your message.</p>
+    <div class="format-grid">
+      <div class="format-card"><div class="format-btn-demo">B</div><div class="format-result">Highlight text, tap <strong>B</strong> for <strong>bold</strong></div></div>
+      <div class="format-card"><div class="format-btn-demo"><em>I</em></div><div class="format-result">Tap <em>I</em> for <em>italic text</em></div></div>
+      <div class="format-card"><div class="format-btn-demo">• List</div><div class="format-result">Tap for bullet points. Press again to add another bullet.</div></div>
+      <div class="format-card"><div class="format-btn-demo">↵</div><div class="format-result">Add a new line without sending the message</div></div>
+    </div>
+  </div>
+
+  <!-- SECTION 7 -->
+  <div class="section-eyebrow">
+    <div class="section-num">7</div>
+    <div class="section-title">Attaching a Photo or File</div>
+  </div>
+  <div class="card">
+    <div class="step-row"><div class="step-bubble">1</div><div><strong>Tap "Attach File"</strong><p>Find it in the toolbar above the text box.</p></div></div>
+    <div class="step-row"><div class="step-bubble">2</div><div><strong>Choose your file</strong><p>Your camera roll opens for photos. For documents, choose "Browse" or "Files" to pick from your phone's storage.</p></div></div>
+    <div class="step-row"><div class="step-bubble">3</div><div><strong>Add a caption (optional)</strong><p>Type a description in the text box, then tap the green arrow to send. Teammates tap <strong>↓ Download</strong> to save the file.</p></div></div>
+    <div class="tip">
+      <strong>What you can attach:</strong> Photos (JPG, PNG, GIF), documents (Word .docx, PDF, Excel .xlsx, PowerPoint .pptx), and most other files up to <strong>5 MB</strong>.<br><br>
+      <strong>Videos are not supported</strong> — they're too large. Share a video link from YouTube, Google Drive, or OneDrive instead.<br><br>
+      <strong>Large files over 5 MB</strong> (big presentations, high-res photos): share a link from Google Drive or OneDrive. Just paste the link as a message and your team can tap it to open.
+    </div>
+  </div>
+
+  <!-- SECTION 8 -->
+  <div class="section-eyebrow">
+    <div class="section-num">8</div>
+    <div class="section-title">Collaborating on a Document</div>
+  </div>
+  <div class="card">
+    <p>NoteFlow has a built-in document editor. Your whole team can write and edit the same document at the same time — it saves automatically and shows who's typing.</p>
+    <div class="mockup-wrap">
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-notch-bar"></div></div>
+        <div class="phone-screen">
+          <div class="ph-header">
+            <div class="ph-logo-mark"><svg width="12" height="12" viewBox="0 0 80 80" fill="none"><path d="M56 20 C56 12 48 8 42 8 C36 8 28 12 28 20 L28 52 C28 64 52 64 52 52 L52 24 C52 18 36 18 36 24 L36 52" stroke="#7B8CFF" stroke-width="9" fill="none" stroke-linecap="round"/></svg></div>
+            <div style="font-size:9px;color:#F5A342;font-weight:700;flex:1">📄 Meeting Notes</div>
+            <div class="ph-me-pill"><div class="ph-me-dot">JJ</div><span class="ph-me-name">John J…</span></div>
+          </div>
+          <div style="background:#0F1118;border-bottom:1px solid #1E2028;padding:4px 6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center;">
+            <div class="ph-tool-btn-sm" style="font-weight:700">B</div>
+            <div class="ph-tool-btn-sm" style="font-style:italic">I</div>
+            <div class="ph-tool-btn-sm" style="text-decoration:underline">U</div>
+            <div style="width:1px;height:11px;background:#2A2A3A;margin:0 2px"></div>
+            <div class="ph-tool-btn-sm">H1</div>
+            <div class="ph-tool-btn-sm">H2</div>
+            <div style="width:1px;height:11px;background:#2A2A3A;margin:0 2px"></div>
+            <div class="ph-tool-btn-sm">• List</div>
+            <div class="ph-tool-btn-sm">1. List</div>
+            <span style="font-size:7px;color:#F5A342;margin-left:auto">Lisa is editing…</span>
+          </div>
+          <div style="padding:10px;font-size:8px;line-height:1.7;color:var(--phone-text);font-family:'Inter',sans-serif;">
+            <div style="font-size:11px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:6px">Q3 Team Meeting Notes</div>
+            <div style="font-weight:700;font-size:9px;margin-bottom:3px">Goals for this quarter:</div>
+            <div style="color:var(--phone-dim)">• Expand provider onboarding</div>
+            <div style="color:var(--phone-dim)">• Launch new event format</div>
+            <div style="color:var(--phone-dim)">• Update training materials</div>
+            <div style="margin-top:6px;color:var(--phone-dim);opacity:.6">|</div>
+          </div>
+          <div style="padding:3px 10px;font-size:7px;color:var(--phone-green);background:#0F1118;border-top:1px solid #1E2028">✓ Saved</div>
+          <div class="ph-tab-bar">
+            <div class="ph-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Notes</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Topics</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Actions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step-row"><div class="step-bubble">1</div><div><strong>Tap Topics → scroll to Documents</strong><p>On desktop it's in the left sidebar. On mobile, tap Topics and scroll down to the Documents section.</p></div></div>
+    <div class="step-row"><div class="step-bubble">2</div><div><strong>Tap + to create a new document</strong><p>Give it a name — "Meeting Notes," "Team Handbook," etc. — then tap Create Document.</p></div></div>
+    <div class="step-row"><div class="step-bubble">3</div><div><strong>Start typing</strong><p>Use Bold, Italic, headings (H1/H2), and bullet lists to organize your content.</p></div></div>
+    <div class="step-row"><div class="step-bubble">4</div><div><strong>Your teammates can join in</strong><p>Anyone can open the same document and edit it. You'll see a yellow notice when someone else is typing. Changes save automatically — <strong>✓ Saved</strong> appears at the bottom.</p></div></div>
+    <div class="tip"><strong>Rename or delete:</strong> Tap the <strong>⋯</strong> button next to any document name in the sidebar. Type RENAME or DELETE when prompted.<br><br><strong>Sharing existing files:</strong> To share a Word doc or Google Doc, just paste the link as a message — teammates tap it to open.</div>
+  </div>
+
+  <!-- SECTION 9 -->
+  <div class="section-eyebrow">
+    <div class="section-num">9</div>
+    <div class="section-title">Finding Shared Files</div>
+  </div>
+  <div class="card">
+    <p>Every photo and file shared across any topic or group is collected in one place — the Files library. No more hunting through old messages.</p>
+    <div class="mockup-wrap">
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-notch-bar"></div></div>
+        <div class="phone-screen">
+          <div class="ph-header">
+            <div class="ph-logo-mark"><svg width="12" height="12" viewBox="0 0 80 80" fill="none"><path d="M56 20 C56 12 48 8 42 8 C36 8 28 12 28 20 L28 52 C28 64 52 64 52 52 L52 24 C52 18 36 18 36 24 L36 52" stroke="#7B8CFF" stroke-width="9" fill="none" stroke-linecap="round"/></svg></div>
+            <div style="font-size:9px;color:var(--phone-ac);font-weight:700;flex:1">📎 Files</div>
+            <div class="ph-me-pill"><div class="ph-me-dot">JJ</div><span class="ph-me-name">John J…</span></div>
+          </div>
+          <div style="padding:8px;display:flex;flex-direction:column;gap:5px;">
+            <div style="font-size:7px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--phone-dim);margin-bottom:2px">Aug 23, 2026</div>
+            <div style="display:flex;align-items:center;gap:6px;background:var(--phone-card);border-radius:8px;padding:6px 8px;">
+              <div style="font-size:14px;flex-shrink:0">📄</div>
+              <div style="flex:1;min-width:0"><div style="font-size:8px;font-weight:700;color:var(--phone-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Team_Handbook.docx</div><div style="font-size:7px;color:var(--phone-dim)">Lisa · #General</div></div>
+              <div style="background:var(--phone-ac);color:#fff;border-radius:5px;padding:2px 5px;font-size:7px;font-weight:700;flex-shrink:0">↓</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;background:var(--phone-card);border-radius:8px;padding:6px 8px;">
+              <div style="font-size:14px;flex-shrink:0">🖼</div>
+              <div style="flex:1;min-width:0"><div style="font-size:8px;font-weight:700;color:var(--phone-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">event_photo.jpg</div><div style="font-size:7px;color:var(--phone-dim)">Mike · #Improvements</div></div>
+              <div style="background:var(--phone-ac);color:#fff;border-radius:5px;padding:2px 5px;font-size:7px;font-weight:700;flex-shrink:0">↓</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;background:var(--phone-card);border-radius:8px;padding:6px 8px;">
+              <div style="font-size:14px;flex-shrink:0">📊</div>
+              <div style="flex:1;min-width:0"><div style="font-size:8px;font-weight:700;color:var(--phone-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Q3_Budget.xlsx</div><div style="font-size:7px;color:var(--phone-dim)">Duke · 👥 Group20</div></div>
+              <div style="background:var(--phone-ac);color:#fff;border-radius:5px;padding:2px 5px;font-size:7px;font-weight:700;flex-shrink:0">↓</div>
+            </div>
+          </div>
+          <div class="ph-tab-bar">
+            <div class="ph-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Notes</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Topics</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</div>
+            <div class="ph-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Actions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout-row"><div class="callout-num">1</div><div class="callout-text">On mobile: tap <strong>Topics</strong>, scroll down to <strong>Views</strong>, tap <strong>Files</strong>. On desktop: click <strong>📎 Files</strong> in the left sidebar under Views.</div></div>
+    <div class="callout-row"><div class="callout-num">2</div><div class="callout-text">Every shared file appears here, sorted newest first — showing <strong>who shared it</strong> and <strong>which topic or group</strong> it came from.</div></div>
+    <div class="callout-row"><div class="callout-num">3</div><div class="callout-text">Tap <strong>↓ Download</strong> to save a file to your device.</div></div>
+  </div>
+
+  <!-- SECTION 10 -->
+  <div class="section-eyebrow">
+    <div class="section-num">10</div>
+    <div class="section-title">Add NoteFlow to Your Home Screen</div>
+  </div>
+  <div class="card">
+    <p>Adding NoteFlow to your home screen makes it open full-screen like a real app — no browser bar, no distractions.</p>
+    <div class="platform-grid">
+      <div class="platform-card">
+        <div class="platform-name">📱 iPhone</div>
+        <div class="platform-steps">
+          <span>1. Open in <strong>Safari</strong></span>
+          <span>2. Tap the Share button (box with arrow)</span>
+          <span>3. Tap <strong>"Add to Home Screen"</strong></span>
+          <span>4. Tap <strong>Add</strong></span>
+        </div>
+      </div>
+      <div class="platform-card">
+        <div class="platform-name">🤖 Android</div>
+        <div class="platform-steps">
+          <span>1. Open in <strong>Chrome</strong></span>
+          <span>2. Tap the ⋮ menu (top right)</span>
+          <span>3. Tap <strong>"Add to Home screen"</strong></span>
+          <span>4. Tap <strong>Add</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="card" style="text-align:center;padding:1.5rem">
+    <div style="font-size:2rem;margin-bottom:.5rem">💡</div>
+    <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:1.05rem;margin-bottom:.4rem">Questions?</div>
+    <p>Send a DM to your team leader in NoteFlow or reach out directly. You'll get the hang of it quickly!</p>
+  </div>
+
+</div>
+</body>
+</html>
