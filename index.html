@@ -514,9 +514,12 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <div class="sidebar-sec" id="groupSection">
         <div class="sidebar-label">
           Groups
-          <button class="add-btn" onclick="showNewGroup()" title="New group">+</button>
+          <span style="display:flex;gap:4px;align-items:center">
+            <button class="add-btn" onclick="showJoinGroup()" title="Join group" style="font-size:13px;padding:0 6px">🔑</button>
+            <button class="add-btn" onclick="showNewGroup()" title="New group">+</button>
+          </span>
         </div>
-        <div id="groupList"><div class="sidebar-empty">No groups yet</div></div>
+        <div id="groupList"><div class="sidebar-empty">No groups — create or join one</div></div>
       </div>
       <div class="sidebar-sec" id="dmSection" style="display:none">
         <div class="sidebar-label">Direct Messages</div>
@@ -682,11 +685,44 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 <div class="modal-overlay" id="newGroupModal" onclick="if(event.target===this)closeNewGroup()">
   <div class="modal">
     <div style="font-size:1.8rem">👥</div>
-    <div class="modal-title">New Group</div>
-    <div class="modal-sub">e.g. "Sales", "Marketing", "Accounting"</div>
+    <div class="modal-title">New Private Group</div>
+    <div class="modal-sub">Only members with the passphrase can join</div>
     <input class="modal-input" id="newGroupInput" placeholder="Group name…" maxlength="40" autocomplete="off">
+    <input class="modal-input" id="newGroupPass" placeholder="Passphrase (share this to invite)…" maxlength="60" autocomplete="off" style="margin-top:8px">
     <button class="modal-primary" onclick="createGroup()">Create Group →</button>
     <button class="modal-secondary" onclick="closeNewGroup()">Cancel</button>
+  </div>
+</div>
+
+<!-- join group modal -->
+<div class="modal-overlay" id="joinGroupModal" onclick="if(event.target===this)closeJoinGroup()">
+  <div class="modal">
+    <div style="font-size:1.8rem">🔑</div>
+    <div class="modal-title">Join a Group</div>
+    <div class="modal-sub">Enter the passphrase shared with you</div>
+    <input class="modal-input" id="joinGroupPass" placeholder="Enter passphrase…" maxlength="60" autocomplete="off">
+    <button class="modal-primary" onclick="joinGroupByPassphrase()">Join Group →</button>
+    <button class="modal-secondary" onclick="closeJoinGroup()">Cancel</button>
+  </div>
+</div>
+
+<!-- group members modal -->
+<div class="modal-overlay" id="groupMembersModal" onclick="if(event.target===this)closeGroupMembers()">
+  <div class="modal" style="max-width:380px;max-height:80vh;overflow-y:auto">
+    <div class="modal-title" id="gmTitle">Group Members</div>
+    <div id="gmPassRow" style="display:none;background:var(--card2);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px">
+      <div style="color:var(--dim);font-size:11px;margin-bottom:2px">Passphrase (share to invite)</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="gmPassText" style="font-weight:600;font-family:monospace;flex:1"></span>
+        <button class="entry-act-btn" onclick="copyGroupPass()" style="padding:3px 8px">Copy</button>
+      </div>
+    </div>
+    <div id="gmMemberList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+    <div id="gmEditRow" style="display:none;margin-bottom:12px">
+      <input class="modal-input" id="gmNewPass" placeholder="New passphrase…" maxlength="60" style="margin-bottom:6px">
+      <button class="modal-primary" onclick="updateGroupPass()" style="padding:8px">Update Passphrase</button>
+    </div>
+    <button class="modal-secondary" onclick="closeGroupMembers()">Close</button>
   </div>
 </div>
 
@@ -780,7 +816,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <div id="mobileTopicList"></div>
   </div>
   <div class="mobile-panel-sec">
-    <div class="mobile-panel-label">Groups <button class="add-btn" onclick="showNewGroup()">+</button></div>
+    <div class="mobile-panel-label">Groups <span style="display:flex;gap:4px"><button class="add-btn" onclick="showJoinGroup()">🔑</button><button class="add-btn" onclick="showNewGroup()">+</button></span></div>
     <div id="mobileGroupList"><div class="sidebar-empty">No groups yet</div></div>
   </div>
 </div>
@@ -821,6 +857,7 @@ let myName='',myInitials='',myColor='',myId='';
 let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,assignedUsers=[];
 let currentView='topic',currentTopicId='general',currentDmWith=null,currentGroupId=null;
 let allTopics={},allUsers={},allEntries={},allProfiles={},allGroups={},allDmsData={};
+let myGroupIds=new Set();
 let typingTimer=null,searchQuery='',isDark=true;
 
 // Textarea
@@ -977,6 +1014,7 @@ function initFirebase(){
     });
     onValue(ref(db,'dms'),snap=>{allDmsData=snap.val()||{};renderDmList(allDmsData);});
     onValue(ref(db,'groups/meta'),snap=>{allGroups=snap.val()||{};renderGroupList();});
+    onValue(ref(db,'userGroups/'+myId),snap=>{myGroupIds=new Set(Object.keys(snap.val()||{}));renderGroupList();});
     listenMentions();
     switchTopic('general');
   },200);
@@ -1667,33 +1705,67 @@ function showNewGroup(){
 function closeNewGroup(){
   document.getElementById('newGroupModal')?.classList.remove('show');
   document.getElementById('newGroupInput').value='';
+  document.getElementById('newGroupPass').value='';
 }
-document.getElementById('newGroupInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')createGroup();});
+function showJoinGroup(){
+  const m=document.getElementById('joinGroupModal');
+  if(m){m.classList.add('show');setTimeout(()=>document.getElementById('joinGroupPass').focus(),350);}
+}
+function closeJoinGroup(){
+  document.getElementById('joinGroupModal')?.classList.remove('show');
+  document.getElementById('joinGroupPass').value='';
+}
+document.getElementById('newGroupInput')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('newGroupPass').focus();});
+document.getElementById('newGroupPass')?.addEventListener('keydown',e=>{if(e.key==='Enter')createGroup();});
+document.getElementById('joinGroupPass')?.addEventListener('keydown',e=>{if(e.key==='Enter')joinGroupByPassphrase();});
 function createGroup(){
-  const inp=document.getElementById('newGroupInput');
-  const name=inp.value.trim();
-  if(!name)return;
+  const name=document.getElementById('newGroupInput').value.trim();
+  const pass=document.getElementById('newGroupPass').value.trim();
+  if(!name||!pass){toast('Name and passphrase required');return;}
   if(!window._fb)return;
   const{db,ref,set}=window._fb;
   const id='g_'+Math.random().toString(36).slice(2,9);
-  set(ref(db,'groups/meta/'+id),{name,createdBy:myName,ts:Date.now()});
+  set(ref(db,'groups/meta/'+id),{name,passphrase:pass,createdBy:myName,creatorId:myId,ts:Date.now()});
+  set(ref(db,'groups/'+id+'/members/'+myId),{name:myName,initials:myInitials,color:myColor,role:'admin',ts:Date.now()});
+  set(ref(db,'userGroups/'+myId+'/'+id),true);
   closeNewGroup();
   setTimeout(()=>switchGroup(id),300);
 }
+async function joinGroupByPassphrase(){
+  const pass=document.getElementById('joinGroupPass').value.trim();
+  if(!pass)return;
+  if(!window._fb)return;
+  const{db,ref,get,set}=window._fb;
+  const snap=await get(ref(db,'groups/meta'));
+  const allG=snap.val()||{};
+  const entry=Object.entries(allG).find(([,g])=>g.passphrase===pass);
+  if(!entry){toast('Passphrase not found — check with your group admin');return;}
+  const[gid,g]=entry;
+  if(myGroupIds.has(gid)){toast('You are already in '+g.name,true);closeJoinGroup();switchGroup(gid);return;}
+  const banSnap=await get(ref(db,'groups/'+gid+'/banned/'+myId));
+  if(banSnap.val()){toast('You have been removed from this group');return;}
+  await set(ref(db,'groups/'+gid+'/members/'+myId),{name:myName,initials:myInitials,color:myColor,role:'member',ts:Date.now()});
+  await set(ref(db,'userGroups/'+myId+'/'+gid),true);
+  toast('Joined '+g.name+'!',true);
+  closeJoinGroup();
+  setTimeout(()=>switchGroup(gid),300);
+}
 function renderGroupList(){
-  const rows=Object.entries(allGroups).map(([id,g])=>{
+  // Legacy groups (no passphrase) are visible to all; new groups require membership
+  const myGroups=Object.entries(allGroups).filter(([id,g])=>!g.passphrase||myGroupIds.has(id));
+  const rows=myGroups.map(([id,g])=>{
     const isActive=currentView==='group'&&currentGroupId===id;
     return `<div class="nav-row${isActive?' active':''}" onclick="switchGroup('${esc(id)}')">
       <span class="row-icon" style="color:var(--purple)">👥</span>
       <span class="row-label">${esc(g.name)}</span>
     </div>`;
-  }).join('')||'<div class="sidebar-empty">No groups yet</div>';
-  const mobileRows=Object.entries(allGroups).map(([id,g])=>{
+  }).join('')||'<div class="sidebar-empty">No groups — create or join one</div>';
+  const mobileRows=myGroups.map(([id,g])=>{
     return `<div class="nav-row" onclick="switchGroup('${esc(id)}');showMobileTab('notes')">
       <span class="row-icon" style="color:var(--purple)">👥</span>
       <span class="row-label">${esc(g.name)}</span>
     </div>`;
-  }).join('')||'<div class="sidebar-empty">No groups yet</div>';
+  }).join('')||'<div class="sidebar-empty">No groups — create or join one</div>';
   const gl=document.getElementById('groupList');if(gl)gl.innerHTML=rows;
   const mgl=document.getElementById('mobileGroupList');if(mgl)mgl.innerHTML=mobileRows;
 }
@@ -1701,8 +1773,10 @@ function switchGroup(groupId){
   currentView='group';currentGroupId=groupId;currentDmWith=null;
   stopTypingIndicator();cancelReply();cancelActionTag();
   const g=allGroups[groupId]||{name:groupId};
+  const isAdmin=g.creatorId===myId||g.createdBy===myName;
   document.getElementById('paneTitle').innerHTML=
-    `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
+    `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`+
+    `<button class="tool-btn" style="margin-left:auto;font-size:12px;padding:4px 8px" onclick="showGroupMembers('${esc(groupId)}')">👤 Members</button>`;
   document.getElementById('actionToolbar').style.display='flex';
   document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow').classList.remove('action-active');
@@ -1715,6 +1789,69 @@ function switchGroup(groupId){
       renderFeed(snap.val()||{},false);
     });
   }
+}
+
+// ── GROUP MEMBERS MODAL ───────────────────────────────
+let _gmGroupId=null;
+async function showGroupMembers(groupId){
+  _gmGroupId=groupId;
+  const g=allGroups[groupId]||{};
+  const isAdmin=g.creatorId===myId||g.createdBy===myName;
+  document.getElementById('gmTitle').textContent=g.name+' — Members';
+  const passRow=document.getElementById('gmPassRow');
+  const editRow=document.getElementById('gmEditRow');
+  if(isAdmin&&g.passphrase){
+    passRow.style.display='block';
+    document.getElementById('gmPassText').textContent=g.passphrase;
+    editRow.style.display='block';
+  } else {
+    passRow.style.display='none';
+    editRow.style.display='none';
+  }
+  document.getElementById('groupMembersModal').classList.add('show');
+  if(!window._fb)return;
+  const{db,ref,get}=window._fb;
+  const snap=await get(ref(db,'groups/'+groupId+'/members'));
+  const members=snap.val()||{};
+  const list=document.getElementById('gmMemberList');
+  list.innerHTML=Object.entries(members).map(([uid,m])=>{
+    const isCreator=uid===g.creatorId||m.name===g.createdBy;
+    const isSelf=uid===myId||m.name===myName;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--card2)">
+      <div style="background:${m.color||'#888'};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;flex-shrink:0">${esc(m.initials||'?')}</div>
+      <span style="flex:1;font-size:14px">${esc(m.name||'Unknown')}${isCreator?'<span style="font-size:10px;color:var(--ac);margin-left:6px">admin</span>':''}</span>
+      ${isAdmin&&!isSelf&&!isCreator?`
+        <button class="entry-act-btn" onclick="removeGroupMember('${esc(uid)}','${esc(m.name||'')}',false)" style="padding:3px 7px;font-size:11px">Remove</button>
+        <button class="entry-act-btn del" onclick="removeGroupMember('${esc(uid)}','${esc(m.name||'')}',true)" style="padding:3px 7px;font-size:11px">Ban</button>
+      `:''}
+    </div>`;
+  }).join('')||'<div style="color:var(--dim);font-size:13px">No members yet</div>';
+}
+function closeGroupMembers(){document.getElementById('groupMembersModal')?.classList.remove('show');}
+function copyGroupPass(){
+  const p=document.getElementById('gmPassText').textContent;
+  navigator.clipboard.writeText(p).then(()=>toast('Passphrase copied!',true));
+}
+async function updateGroupPass(){
+  const np=document.getElementById('gmNewPass').value.trim();
+  if(!np||!_gmGroupId)return;
+  const{db,ref,set}=window._fb;
+  const g=allGroups[_gmGroupId]||{};
+  await set(ref(db,'groups/meta/'+_gmGroupId),{...g,passphrase:np});
+  document.getElementById('gmPassText').textContent=np;
+  document.getElementById('gmNewPass').value='';
+  toast('Passphrase updated',true);
+}
+async function removeGroupMember(uid,name,ban){
+  if(!_gmGroupId)return;
+  const confirmed=window.confirm((ban?'Ban':'Remove')+' '+name+' from this group?');
+  if(!confirmed)return;
+  const{db,ref,remove,set}=window._fb;
+  await remove(ref(db,'groups/'+_gmGroupId+'/members/'+uid));
+  await remove(ref(db,'userGroups/'+uid+'/'+_gmGroupId));
+  if(ban)await set(ref(db,'groups/'+_gmGroupId+'/banned/'+uid),{name,ts:Date.now()});
+  toast(name+(ban?' banned':' removed'),true);
+  showGroupMembers(_gmGroupId);
 }
 
 // ── FILES ─────────────────────────────────────────────
