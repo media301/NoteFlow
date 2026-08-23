@@ -285,6 +285,11 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .reply-banner{display:none;align-items:center;gap:9px;padding:6px 1.25rem;
               background:var(--acbg);border-bottom:1px solid rgba(31,214,156,.15);}
 .reply-banner.show{display:flex;}
+.attach-preview{display:none;align-items:center;gap:9px;padding:6px 1.25rem;
+                background:var(--purplebg);border-bottom:1px solid rgba(123,140,255,.15);}
+.attach-preview.show{display:flex;}
+.attach-preview img{width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid var(--brd2);flex-shrink:0;}
+.attach-preview span{font-size:12px;color:var(--dim2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .reply-to-name{font-size:12px;font-weight:600;color:var(--ac);}
 .reply-snippet{font-size:12px;color:var(--dim2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .reply-x{background:none;border:none;color:var(--dim);font-size:17px;line-height:1;cursor:pointer;padding:2px 4px;}
@@ -580,6 +585,11 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     </div>
 
     <div class="input-area">
+      <div class="attach-preview" id="attachPreview">
+        <img id="attachThumb" src="" alt="">
+        <span id="attachName"></span>
+        <button class="reply-x" onclick="cancelAttach()">×</button>
+      </div>
       <div class="reply-banner" id="replyBanner">
         <span style="color:var(--ac);font-size:13px">↩</span>
         <span class="reply-to-name" id="replyToName"></span>
@@ -785,7 +795,7 @@ const EMOJIS=['👍','❤️','😂','🎉','💡'];
 let myName='',myInitials='',myColor='',myId='';
 let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,assignedUsers=[];
 let currentView='topic',currentTopicId='general',currentDmWith=null,currentGroupId=null;
-let allTopics={},allUsers={},allEntries={},allProfiles={},allGroups={};
+let allTopics={},allUsers={},allEntries={},allProfiles={},allGroups={},allDmsData={};
 let typingTimer=null,searchQuery='',isDark=true;
 
 // Textarea
@@ -893,7 +903,7 @@ function initFirebase(){
       allTopics=Object.keys(data).length?data:{general:{title:'General',createdBy:'system',ts:0}};
       renderTopicList();
     });
-    onValue(ref(db,'dms'),snap=>{renderDmList(snap.val()||{});});
+    onValue(ref(db,'dms'),snap=>{allDmsData=snap.val()||{};renderDmList(allDmsData);});
     onValue(ref(db,'groups/meta'),snap=>{allGroups=snap.val()||{};renderGroupList();});
     listenMentions();
     switchTopic('general');
@@ -1014,6 +1024,7 @@ function createTopic(){
 function dmKey(a,b){return [a,b].sort().join('__');}
 function openDm(userId,name,initials,color){
   currentView='dm';currentDmWith={userId,name,initials,color};currentGroupId=null;
+  localStorage.setItem('seen_dm_'+dmKey(myId,userId),Date.now());
   stopTypingIndicator();
   document.getElementById('paneTitle').innerHTML=
     `<div class="pane-dm-badge" style="background:${color}">${esc(initials)}</div>
@@ -1024,15 +1035,15 @@ function openDm(userId,name,initials,color){
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
     const key=dmKey(myId,userId);
-    // Save member info so offline users still show correctly
     set(ref(db,'dms/'+key+'/members/'+userId),{name,initials,color});
     set(ref(db,'dms/'+key+'/members/'+myId),{name:myName,initials:myInitials,color:myColor});
     onValue(ref(db,'dms/'+key+'/entries'),snap=>{
       if(currentView!=='dm'||currentDmWith?.userId!==userId)return;
+      localStorage.setItem('seen_dm_'+key,Date.now());
       renderFeed(snap.val()||{},true);
     });
   }
-  renderTopicList();renderDmList(null);closeSheet();
+  renderTopicList();renderDmList(allDmsData);closeSheet();
 }
 function renderDmList(data){
   const dmSection=document.getElementById('dmSection');
@@ -1046,13 +1057,20 @@ function renderDmList(data){
   if(sheetDmSection)sheetDmSection.style.display='block';
   const html=myDms.map(([key,dmData])=>{
     const otherId=key.replace(myId,'').replace(/^__|__$/,'');
-    // Use saved member info first, fall back to online presence
     const saved=(dmData.members&&dmData.members[otherId])||null;
     const other=allUsers[otherId]||saved||{name:'Unknown',initials:'?',color:'#888'};
     const isActive=currentView==='dm'&&currentDmWith?.userId===otherId;
+    const isOnline=!!allUsers[otherId];
+    const entries=Object.values(dmData.entries||{});
+    const lastSeen=parseInt(localStorage.getItem('seen_dm_'+key)||'0');
+    const hasUnread=!isActive&&entries.some(e=>(e.ts||0)>lastSeen&&e.authorId!==myId);
     return `<div class="nav-row${isActive?' dm-active':''}" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}')">
-      <div style="background:${other.color};width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;flex-shrink:0">${esc(other.initials)}</div>
+      <div style="position:relative;flex-shrink:0">
+        <div style="background:${other.color};width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000">${esc(other.initials)}</div>
+        ${isOnline?`<div style="position:absolute;bottom:-1px;right:-1px;width:7px;height:7px;border-radius:50%;background:#1FD69C;border:1.5px solid var(--surf)"></div>`:''}
+      </div>
       <span class="row-label">${esc(other.name)}</span>
+      ${hasUnread?'<div class="row-badge-dot"></div>':''}
     </div>`;
   }).join('');
   if(dmList)dmList.innerHTML=html;
@@ -1340,7 +1358,7 @@ function buildEntry(id,e,isDm){
         <div class="entry-quote-text"><strong style="color:${e.replyTo.color}">${esc(e.replyTo.name)}: </strong>${esc(e.replyTo.text||'')}</div>
       </div>`:'';
   let content='';
-  if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}"></div>`;
+  if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
   else if(e.type==='file')content=`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span></div>`;
   else content=`<div class="entry-text">${parseMentions(e.text||'')}</div>`;
   const bubbleClass='entry-bubble'+(e.isAction?' is-action':'')+(e.pinned?' is-pinned':'');
@@ -1355,10 +1373,10 @@ function buildEntry(id,e,isDm){
         ${e.pinned?'<span class="pin-badge">📌</span>':''}
         <div class="entry-actions">
           ${!isDm?`<button class="entry-act-btn reply-btn">↩ Reply</button>`:''}
-          ${isMe&&e.type!=='image'&&e.type!=='file'?`
+          ${isMe&&e.type==='text'?`
             <button class="entry-act-btn edit-btn">✏ Edit</button>
-            <button class="entry-act-btn${e.pinned?' pin-active':''} pin-btn">${e.pinned?'📌 Unpin':'📌 Pin'}</button>
-            <button class="entry-act-btn del del-btn">🗑 Delete</button>`:''}
+            <button class="entry-act-btn${e.pinned?' pin-active':''} pin-btn">${e.pinned?'📌 Unpin':'📌 Pin'}</button>`:''}
+          ${isMe?`<button class="entry-act-btn del del-btn">🗑 Delete</button>`:''}
         </div>
       </div>
       ${quote}${content}
@@ -1498,9 +1516,18 @@ function startInlineEdit(entryDiv,entryId,e){
 }
 
 // ── SEND ─────────────────────────────────────────────
+let pendingAttachment=null;
+function cancelAttach(){pendingAttachment=null;document.getElementById('attachPreview').classList.remove('show');}
 function sendNote(){
-  const text=noteInput.value.trim();if(!text)return;
-  const entry={type:'text',text,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()};
+  const text=noteInput.value.trim();if(!text&&!pendingAttachment)return;
+  let entry;
+  if(pendingAttachment){
+    entry={...pendingAttachment,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()};
+    if(text)entry.text=text;
+    cancelAttach();
+  }else{
+    entry={type:'text',text,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()};
+  }
   if(replyingTo){entry.replyTo={name:replyingTo.name,text:replyingTo.text.slice(0,120),color:replyingTo.color};cancelReply();}
   if(isActionTag){
     entry.isAction=true;
@@ -1513,7 +1540,6 @@ function sendNote(){
     pushEntry(entry).then(ref=>{if(ref&&text)sendMentionNotifications(text,ref.key,currentTopicId);}).catch(()=>{});
   }
   noteInput.value='';noteInput.style.height='auto';hideMentionPicker();
-  // Clear typing
   if(window._fb&&currentView==='topic'){const{db,ref,remove}=window._fb;remove(ref(db,'typing/'+currentTopicId+'/'+myId));}
 }
 function pushEntry(entry){if(!window._fb)return Promise.resolve(null);const{db,ref,push}=window._fb;return push(ref(db,'topics/'+currentTopicId+'/entries'),entry);}
@@ -1571,7 +1597,7 @@ function switchGroup(groupId){
     `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
   document.getElementById('actionToolbar').style.display='flex';
   document.getElementById('actionItemsRow').classList.remove('action-active');
-  renderGroupList();renderTopicList();renderDmList(null);
+  renderGroupList();renderTopicList();renderDmList(allDmsData);
   clearFeed();
   if(window._fb){
     const{db,ref,onValue}=window._fb;
@@ -1585,13 +1611,21 @@ function switchGroup(groupId){
 // ── FILES ─────────────────────────────────────────────
 document.getElementById('fileInput').addEventListener('change',async e=>{
   const files=Array.from(e.target.files);e.target.value='';
-  for(const f of files){
-    if(f.type.startsWith('image/')){
-      toast('Attaching image…',true);const src=await resizeImg(f,900);
-      pushEntry({type:'image',filename:f.name,src,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()});
-    }else{pushEntry({type:'file',filename:f.name,icon:fileIcon(f.name),name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()});}
+  if(!files.length)return;
+  const f=files[0];
+  if(f.type.startsWith('image/')){
+    toast('Loading image…',true);
+    const src=await resizeImg(f,900);
+    pendingAttachment={type:'image',filename:f.name,src};
+    document.getElementById('attachThumb').src=src;
+    document.getElementById('attachName').textContent=f.name;
+    document.getElementById('attachPreview').classList.add('show');
+    noteInput.focus();
+    toast('Photo ready — add a caption or send now',true);
+  }else{
+    pushEntry({type:'file',filename:f.name,icon:fileIcon(f.name),name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()});
+    toast('File attached!',true);
   }
-  toast('Attached!',true);
 });
 function fileIcon(n){const e=n.split('.').pop().toLowerCase();return{pdf:'📕',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📊',ppt:'📊',pptx:'📊',mp3:'🎵',wav:'🎵',mp4:'🎬',mov:'🎬',zip:'📦'}[e]||'📄';}
 async function resizeImg(file,maxW){return new Promise(res=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);const c=document.createElement('canvas');let w=img.naturalWidth,h=img.naturalHeight;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',.85));};img.src=url;});}
