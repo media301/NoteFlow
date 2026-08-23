@@ -1119,25 +1119,42 @@ function openDm(userId,name,initials,color){
   }
   renderTopicList();renderDmList(allDmsData);closeSheet();
 }
+function getMyDms(data){
+  return Object.entries(data).filter(([k,dmData])=>{
+    if(k.split('__').includes(myId))return true;
+    if(myName&&dmData.members)return Object.values(dmData.members).some(m=>m.name===myName);
+    return false;
+  });
+}
+function getOtherIdFromDm(key,dmData){
+  const parts=key.split('__');
+  const byId=parts.find(p=>p!==myId);
+  if(byId&&parts.includes(myId))return byId;
+  if(dmData.members){
+    const entry=Object.entries(dmData.members).find(([,m])=>m.name!==myName);
+    if(entry)return entry[0];
+  }
+  return parts[0]!==myId?parts[0]:parts[1];
+}
 function renderDmList(data){
   const dmSection=document.getElementById('dmSection');
   const dmList=document.getElementById('dmList');
   const sheetDmSection=document.getElementById('sheetDmSection');
   const sheetDmList=document.getElementById('sheetDmList');
   if(!data){if(dmSection)dmSection.style.display='none';if(sheetDmSection)sheetDmSection.style.display='none';return;}
-  const myDms=Object.entries(data).filter(([k])=>k.split('__').includes(myId));
+  const myDms=getMyDms(data);
   if(!myDms.length){if(dmSection)dmSection.style.display='none';if(sheetDmSection)sheetDmSection.style.display='none';return;}
   if(dmSection)dmSection.style.display='block';
   if(sheetDmSection)sheetDmSection.style.display='block';
   const html=myDms.map(([key,dmData])=>{
-    const otherId=key.replace(myId,'').replace(/^__|__$/,'');
+    const otherId=getOtherIdFromDm(key,dmData);
     const saved=(dmData.members&&dmData.members[otherId])||null;
-    const other=allUsers[otherId]||saved||{name:'Unknown',initials:'?',color:'#888'};
+    const other=allUsers[otherId]||saved||allProfiles[otherId]||{name:'Unknown',initials:'?',color:'#888'};
     const isActive=currentView==='dm'&&currentDmWith?.userId===otherId;
     const isOnline=!!allUsers[otherId];
     const entries=Object.values(dmData.entries||{});
     const lastSeen=parseInt(localStorage.getItem('seen_dm_'+key)||'0');
-    const hasUnread=!isActive&&entries.some(e=>(e.ts||0)>lastSeen&&e.authorId!==myId);
+    const hasUnread=!isActive&&entries.some(e=>(e.ts||0)>lastSeen&&e.authorId!==myId&&e.name!==myName);
     return `<div class="nav-row${isActive?' dm-active':''}" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}')">
       <div style="position:relative;flex-shrink:0">
         <div style="background:${other.color};width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000">${esc(other.initials)}</div>
@@ -1872,13 +1889,13 @@ function renderMobileDms(){
   const{db,ref,get}=window._fb;
   get(ref(db,'dms')).then(snap=>{
     const data=snap.val()||{};
-    const myDms=Object.entries(data).filter(([k])=>k.split('__').includes(myId));
+    const myDms=getMyDms(data);
     const sec=document.getElementById('mobileDmSec');
     const list=document.getElementById('mobileDmList');
     if(!myDms.length||!sec||!list){if(sec)sec.style.display='none';return;}
     sec.style.display='block';
     list.innerHTML=myDms.map(([key,dmData])=>{
-      const otherId=key.replace(myId,'').replace(/^__|__$/,'');
+      const otherId=getOtherIdFromDm(key,dmData);
       const saved=(dmData.members&&dmData.members[otherId])||null;
       const other=allUsers[otherId]||saved||allProfiles[otherId]||{name:'Unknown',initials:'?',color:'#888'};
       return `<div class="nav-row" onclick="openDm('${esc(otherId)}','${esc(other.name)}','${esc(other.initials)}','${esc(other.color)}');showMobileTab('notes')">
