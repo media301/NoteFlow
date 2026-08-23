@@ -1407,8 +1407,8 @@ function renderFeed(data,isDm=false){
 }
 function parseMentions(text){
   let h=esc(text);
-  h=h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  h=h.replace(/_(.+?)_/g,'<em>$1</em>');
+  h=h.replace(/\*\*([\s\S]+?)\*\*/g,'<strong>$1</strong>');
+  h=h.replace(/_([\s\S]+?)_/g,'<em>$1</em>');
   h=h.replace(/`(.+?)`/g,'<code style="background:var(--card2);padding:1px 5px;border-radius:3px;font-size:12px;font-family:monospace">$1</code>');
   h=h.replace(/(^|\n)- (.+)/g,'$1<span style="display:flex;gap:6px;margin:1px 0"><span style="color:var(--ac);flex-shrink:0">•</span><span>$2</span></span>');
   h=h.replace(/\n/g,'<br>');
