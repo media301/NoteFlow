@@ -1372,7 +1372,7 @@ function switchToActionItems(){
   document.getElementById('actionItemsRow').classList.add('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
   clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading action items…';
-  renderTopicList();closeSheet();
+  forceIosRepaint();renderTopicList();closeSheet();
   if(!window._fb){renderActionItems({});return;}
   const{db,ref,get}=window._fb;
   const topicIds=Object.keys(allTopics);
@@ -1695,7 +1695,7 @@ function buildEntry(id,e,isDm){
         <div class="entry-quote-text"><strong style="color:${e.replyTo.color}">${esc(e.replyTo.name)}: </strong>${esc(e.replyTo.text||'')}</div>
       </div>`:'';
   let content='';
-  if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
+  if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}" onload="forceIosRepaint()"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
   else if(e.type==='file')content=e.src
     ?`<div class="entry-file" onclick="downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')" style="cursor:pointer" title="Click to download"><span>${esc(e.icon||'📄')}</span><span style="flex:1">${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--ac);font-weight:600">↓ Download</span></div>`
     :`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--dim)">no download</span></div>`;
@@ -2256,13 +2256,10 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
-  clearTimeout(window._iosRepaintT);
-  window._iosRepaintT=setTimeout(()=>{
-    document.body.style.display='none';
-    void document.body.offsetHeight;
-    document.body.style.display='';
-    void document.body.offsetHeight;
-  },50);
+  document.body.style.display='none';
+  void document.body.offsetHeight;
+  document.body.style.display='';
+  void document.body.offsetHeight;
 }
 let mobileTab='notes';
 function showMobileTab(tab){
@@ -2335,7 +2332,7 @@ function switchToFiles(){
   document.getElementById('groupMembersBtn').classList.remove('grp-active');
   document.getElementById('actionItemsRow').classList.remove('action-active');
   document.getElementById('filesRow').classList.add('action-active');
-  clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading files…';renderTopicList();closeSheet();
+  clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading files…';forceIosRepaint();renderTopicList();closeSheet();
   if(!window._fb){renderFiles([]);return;}
   const{db,ref,get}=window._fb;
   const topicIds=Object.keys(allTopics);
