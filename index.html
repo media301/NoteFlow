@@ -1289,6 +1289,13 @@ function submitPassphrase(){
   }
 }
 (function(){
+  // Auto-auth from invite link: ?p=passphrase
+  const urlP=new URLSearchParams(location.search).get('p');
+  if(urlP&&TEAM_PASSPHRASES.some(ph=>ph.toLowerCase()===urlP.toLowerCase())){
+    localStorage.setItem('nf_auth','1');
+    proceedAfterAuth();
+    return;
+  }
   if(!localStorage.getItem('nf_auth')){document.getElementById('passModal').classList.add('show');return;}
   proceedAfterAuth();
 })();
@@ -1312,7 +1319,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.0';
+  const _ver='v4.1';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1451,6 +1458,11 @@ function initFirebase(){
       if(!data.general)set(ref(db,'topics/meta/general'),{title:'General',createdBy:'system',ts:0});
       allTopics=Object.keys(data).length?data:{general:{title:'General',createdBy:'system',ts:0}};
       renderTopicList();
+      // Eagerly fetch all topic entries so Files/Tasks can render synchronously on first tap
+      Object.keys(allTopics).forEach(tid=>{
+        if(allEntries[tid])return;
+        get(ref(db,'topics/'+tid+'/entries')).then(s=>{allEntries[tid]=s.val()||{};});
+      });
     });
     onValue(ref(db,'dms'),snap=>{allDmsData=snap.val()||{};renderDmList(allDmsData);});
     onValue(ref(db,'groups/meta'),snap=>{allGroups=snap.val()||{};renderGroupList();});
@@ -1508,12 +1520,22 @@ function renderTeam(){
       <span class="who-name">${esc(p.name)}${isMe?' <span class="who-you">you</span>':''}</span>
       <span class="dm-hint">${isMe?'my tasks':(isOnline?'online':'offline')}</span>
       ${!isMe?`<button class="who-task-btn" onclick="event.stopPropagation();openAssignTaskModal('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}')" title="Assign task to ${esc(p.name)}">✅ Task</button>`:''}
+      ${!isMe?`<button class="who-task-btn" onclick="event.stopPropagation();removeMember('${esc(id)}','${esc(p.name)}')" title="Remove from team" style="color:var(--red);border-color:var(--red)">✕</button>`:''}
     </div>`;
   }).join('')||'<div class="sidebar-empty">Just you here</div>';
   const mwl=document.getElementById('mobileWhoList');if(mwl)mwl.innerHTML=teamRows;
   const sw=document.getElementById('sheetWho');if(sw)sw.innerHTML=teamRows;
   // Also update sidebar who's here with just online
   renderOnline(Object.entries(allUsers));
+}
+function removeMember(userId,name){
+  if(!window.confirm('Remove '+name+' from the team? They can re-join with the passphrase.'))return;
+  if(!window._fb)return;
+  const{db,ref,remove}=window._fb;
+  const key=nameKey(name);
+  remove(ref(db,'profiles/'+key));
+  remove(ref(db,'presence/'+userId));
+  toast(name+' removed',true);
 }
 function renderOnline(recent){
   const avatars=document.getElementById('onlineAvatars');
@@ -1774,7 +1796,9 @@ function switchToActionItems(){
   clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading tasks…';
   renderTopicList();closeSheet();
   // Show cached data instantly (within tap gesture so iOS renders it)
-  if(window._lastActionData)renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});
+  // Render synchronously from allEntries (eagerly loaded) — critical for iOS portrait mode
+  if(Object.keys(allEntries).length)renderActionItems(allEntries,{});
+  else if(window._lastActionData)renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});
   forceIosRepaint();
   if(!window._fb){renderActionItems({});return;}
   const{db,ref,get}=window._fb;
@@ -3073,18 +3097,21 @@ function showShare(){
     }
   }
   const phrase=TEAM_PASSPHRASES[0]||'';
-  const shareText=`Join our team on NoteFlow — tap the link and enter the passphrase: ${phrase}`;
+  const inviteUrl=location.origin+location.pathname+'?p='+encodeURIComponent(phrase);
+  const shareText=`Join our team on NoteFlow — tap this link to get right in:\n${inviteUrl}`;
   if(isMobile&&navigator.share){
-    navigator.share({title:'NoteFlow',text:shareText,url:location.href}).catch(()=>{});
+    navigator.share({title:'NoteFlow',text:shareText,url:inviteUrl}).catch(()=>{});
     return;
   }
-  document.getElementById('shareUrlEl').textContent=location.href;
-  document.getElementById('sharePhraseEl').textContent=TEAM_PASSPHRASES[0]||'';
+  document.getElementById('shareUrlEl').textContent=inviteUrl;
+  document.getElementById('sharePhraseEl').textContent='(included in link — just tap to join)';
   document.getElementById('shareModal').classList.add('show');
 }
 function closeShare(){document.getElementById('shareModal').classList.remove('show');}
 function copyLink(){
-  const url=location.href;const done=()=>{toast('Link copied!',true);closeShare();};
+  const phrase=TEAM_PASSPHRASES[0]||'';
+  const url=location.origin+location.pathname+'?p='+encodeURIComponent(phrase);
+  const done=()=>{toast('Invite link copied!',true);closeShare();};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done).catch(()=>fallbackCopy(url,done));}
   else fallbackCopy(url,done);
 }
@@ -3180,7 +3207,16 @@ function switchToFiles(){
   document.getElementById('inputArea').style.display='none';
   clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading files…';
   renderTopicList();closeSheet();
-  if(window._lastFilesData)renderFiles(window._lastFilesData);
+  // Render synchronously from allEntries (eagerly loaded) — critical for iOS portrait mode
+  if(Object.keys(allEntries).length){
+    const syncItems=[];
+    Object.entries(allEntries).forEach(([tid,entries])=>{
+      const label='#'+(allTopics[tid]?.title||tid);
+      Object.values(entries).forEach(e=>{if((e.type==='file'||e.type==='image')&&e.src)syncItems.push({...e,source:label});});
+    });
+    syncItems.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if(syncItems.length)renderFiles(syncItems);
+  } else if(window._lastFilesData){renderFiles(window._lastFilesData);}
   forceIosRepaint();
   if(!window._fb){renderFiles([]);return;}
   const{db,ref,get}=window._fb;
