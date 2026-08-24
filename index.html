@@ -54,10 +54,14 @@ function _loadSpreadsheetLibs(){
       const s2=document.createElement('script');s2.src=base+'jspreadsheet-ce@5.0.4/dist/index.min.js';
       s2.onerror=()=>fail('jspreadsheet failed');
       s2.onload=()=>{
-        if(window.XLSX){res();return;}
-        const s3=document.createElement('script');s3.src='https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
-        s3.onerror=()=>fail('xlsx failed');
-        s3.onload=res;document.head.appendChild(s3);
+        const sf=document.createElement('script');sf.src=base+'@jspreadsheet/formula/dist/index.min.js';
+        sf.onerror=()=>fail('formula addon failed');
+        sf.onload=()=>{
+          if(window.XLSX){res();return;}
+          const s3=document.createElement('script');s3.src='https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+          s3.onerror=()=>fail('xlsx failed');
+          s3.onload=res;document.head.appendChild(s3);
+        };document.head.appendChild(sf);
       };document.head.appendChild(s2);
     };document.head.appendChild(s1);
   });
@@ -1410,7 +1414,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v5.4';
+  const _ver='v5.5';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3209,7 +3213,25 @@ document.addEventListener('DOMContentLoaded',()=>{
     const f=e.target.files[0];e.target.value='';
     if(!f)return;
     const ext=f.name.split('.').pop().toLowerCase();
-    if(ext==='doc'||ext==='docx'){toast('Word docs: upload to Google Drive and use the 🔗 Link button',false);return;}
+    if(ext==='doc'){toast('.doc files not supported — save as .docx and try again',false);return;}
+    if(ext==='docx'){
+      if(!window._fb){toast('Not connected',false);return;}
+      toast('Converting Word doc…',true);
+      try{
+        await _loadMammoth();
+        const buf=await f.arrayBuffer();
+        const result=await mammoth.extractRawText({arrayBuffer:buf});
+        const text=(result.value||'').trim();
+        if(!text){toast('No text found in document',false);return;}
+        const{db,ref,set}=window._fb;
+        const id='doc_'+Date.now().toString(36);
+        const name=f.name.replace(/\.[^.]+$/,'');
+        await set(ref(db,'docs/meta/'+id),{name,createdBy:myName,creatorId:myId,ts:Date.now()});
+        await set(ref(db,'docs/'+id+'/content'),text);
+        toast('Word doc imported as text note',true);
+      }catch(err){toast('Conversion failed: '+(err.message||''),false);}
+      return;
+    }
     if(ext==='pdf'){
       if(f.size>5*1024*1024){toast('PDF too large — keep it under 5 MB',false);return;}
       if(!window._fb){toast('Not connected',false);return;}
