@@ -261,15 +261,29 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 /* FILE LIBRARY */
 .file-lib-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf);
               border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:default;width:100%;}
-.file-lib-row.downloadable{cursor:pointer;}
-.file-lib-row.downloadable:hover{border-color:var(--ac);background:var(--acbg);}
+.file-lib-row:hover{border-color:var(--brd2);}
 .file-lib-icon{font-size:1.5rem;flex-shrink:0;line-height:1;}
+.file-lib-thumb{width:52px;height:52px;border-radius:8px;object-fit:cover;border:1px solid var(--brd2);flex-shrink:0;cursor:pointer;transition:opacity .15s;}
+.file-lib-thumb:hover{opacity:.85;}
 .file-lib-body{flex:1;min-width:0;}
 .file-lib-name{font-weight:600;font-size:13.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .file-lib-meta{font-size:11px;color:var(--dim);margin-top:2px;}
-.file-lib-dl{background:var(--ac);color:#fff;border:none;border-radius:6px;padding:5px 10px;
-             font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;flex-shrink:0;white-space:nowrap;}
+.file-lib-btns{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
+.file-lib-view{background:var(--card2);color:var(--text);border:1px solid var(--brd2);border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;}
+.file-lib-view:hover{border-color:var(--ac);color:var(--ac);}
+.file-lib-dl{background:var(--ac);color:#000;border:none;border-radius:6px;padding:4px 9px;
+             font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;flex-shrink:0;white-space:nowrap;}
 .file-lib-unavail{font-size:11px;color:var(--dim);flex-shrink:0;white-space:nowrap;}
+/* LIGHTBOX */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+.lightbox.show{display:flex;}
+.lightbox img{max-width:92vw;max-height:78vh;border-radius:10px;object-fit:contain;}
+.lightbox-bar{display:flex;gap:10px;align-items:center;}
+.lightbox-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;padding:7px 16px;}
+.lightbox-btn:hover{background:rgba(255,255,255,.22);}
+.lightbox-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;opacity:.7;}
+.lightbox-close:hover{opacity:1;}
+.lightbox-name{font-size:12px;color:rgba(255,255,255,.6);max-width:80vw;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* Reactions */
 .reactions-bar{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;}
@@ -789,6 +803,17 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   </div>
 </div>
 
+<!-- lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <img id="lightboxImg" src="" alt="">
+  <div class="lightbox-name" id="lightboxName"></div>
+  <div class="lightbox-bar" onclick="event.stopPropagation()">
+    <button class="lightbox-btn" onclick="downloadFile(document.getElementById('lightboxName').textContent,document.getElementById('lightboxImg').src)">↓ Download</button>
+    <button class="lightbox-btn" onclick="closeLightbox()">Close</button>
+  </div>
+</div>
+
 <!-- assign task modal -->
 <div class="modal-overlay" id="assignTaskModal">
   <div class="modal">
@@ -1159,7 +1184,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v2.6';
+  const _ver='v2.7';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1302,18 +1327,24 @@ function initFirebase(){
 }
 
 // ── ONLINE ───────────────────────────────────────────
+function showMyTasks(){
+  switchToActionItems();
+  actionFilterUserId=myId;
+  showMobileTab('notes');
+}
 function renderTeam(){
   // All known users from profiles, with online dot for active ones
   const teamRows=Object.entries(allProfiles).map(([id,p])=>{
     const isOnline=!!allUsers[id];
     const isMe=id===myId;
-    return `<div class="who-row"${!isMe?` onclick="iosDmOpen('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}',findExistingDmKey('${esc(id)}'))"`:''}>
+    const onclk=isMe?`onclick="showMyTasks()"`:`onclick="iosDmOpen('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}',findExistingDmKey('${esc(id)}'))"`;
+    return `<div class="who-row" ${onclk}>
       <div style="position:relative;flex-shrink:0">
         <div class="who-badge" style="background:${p.color}">${esc(p.initials)}</div>
         ${isOnline?`<div style="position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;background:#1FD69C;border:1.5px solid var(--surf)"></div>`:''}
       </div>
       <span class="who-name">${esc(p.name)}${isMe?' <span class="who-you">you</span>':''}</span>
-      ${!isMe?`<span class="dm-hint">${isOnline?'online':'offline'}</span>`:''}
+      <span class="dm-hint">${isMe?'my tasks':(isOnline?'online':'offline')}</span>
       ${!isMe?`<button class="who-task-btn" onclick="event.stopPropagation();openAssignTaskModal('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}')" title="Assign task to ${esc(p.name)}">✅ Task</button>`:''}
     </div>`;
   }).join('')||'<div class="sidebar-empty">Just you here</div>';
@@ -1931,7 +1962,7 @@ function buildEntry(id,e,isDm){
         <div class="entry-quote-text"><strong style="color:${e.replyTo.color}">${esc(e.replyTo.name)}: </strong>${esc(e.replyTo.text||'')}</div>
       </div>`:'';
   let content='';
-  if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
+  if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}" onload="forceIosRepaint()"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
   else if(e.type==='file')content=e.src
     ?`<div class="entry-file" onclick="downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')" style="cursor:pointer" title="Click to download"><span>${esc(e.icon||'📄')}</span><span style="flex:1">${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--ac);font-weight:600">↓ Download</span></div>`
     :`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--dim)">no download</span></div>`;
@@ -2732,10 +2763,10 @@ function showMobileTab(tab){
       // stay in current group view — feed already live
     } else if(currentView==='dm'&&currentDmWith){
       const _k=currentDmWith.key;
-      const ep=document.querySelector('.editor-pane');
       clearFeed();
       const _e=(window._dmDataCache||{})[_k]||allDmsData[_k]?.entries;
       if(_e&&Object.keys(_e).length)renderFeed(_e,true);
+      forceIosRepaint();
     } else if(currentView==='doc'&&currentDocId){
       // stay in current doc view — editor already live
     } else if(currentView==='files'||currentView==='actions'){
@@ -2820,6 +2851,20 @@ function switchToFiles(){
   }).catch(()=>renderFiles([]));
 }
 
+function openLightbox(src,name){
+  const lb=document.getElementById('lightbox');
+  const img=document.getElementById('lightboxImg');
+  const nm=document.getElementById('lightboxName');
+  if(!lb||!img)return;
+  img.src=src;
+  if(nm)nm.textContent=name||'';
+  lb.classList.add('show');
+}
+function closeLightbox(){
+  const lb=document.getElementById('lightbox');
+  if(lb)lb.classList.remove('show');
+}
+
 function renderFiles(items){
   if(currentView!=='files')return;
   const feed=document.getElementById('feed');
@@ -2850,18 +2895,22 @@ function renderFiles(items){
       const row=document.createElement('div');
       const hasSrc=!!e.src;
       const isImg=e.type==='image';
-      row.className='file-lib-row'+(hasSrc?' downloadable':'');
-      if(hasSrc)row.onclick=()=>downloadFile(e.filename||'file',e.src);
+      row.className='file-lib-row';
       const time=e.ts?new Date(e.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';
-      const sizeNote=isImg?'photo':'file';
+      const thumbHtml=isImg&&hasSrc
+        ?`<img class="file-lib-thumb" src="${esc(e.src)}" alt="${esc(e.filename||'')}" onclick="openLightbox('${esc(e.src)}','${esc(e.filename||'photo')}')">`
+        :`<div class="file-lib-icon" style="font-size:2rem;width:52px;text-align:center">${esc(e.icon||'📄')}</div>`;
+      const btnsHtml=hasSrc
+        ?`<div class="file-lib-btns">${isImg?`<button class="file-lib-view" onclick="openLightbox('${esc(e.src)}','${esc(e.filename||'photo')}')">👁 View</button>`:''}
+           <button class="file-lib-dl" onclick="downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')">↓ Download</button></div>`
+        :`<span class="file-lib-unavail">No preview</span>`;
       row.innerHTML=`
-        <div class="file-lib-icon">${isImg?'🖼':esc(e.icon||'📄')}</div>
+        ${thumbHtml}
         <div class="file-lib-body">
           <div class="file-lib-name">${esc(e.filename||'Unnamed')}</div>
           <div class="file-lib-meta">Shared by <strong>${esc(e.name||'Unknown')}</strong> in <strong>${esc(e.source||'')}</strong>${time?' · '+time:''}</div>
         </div>
-        ${hasSrc?`<button class="file-lib-dl" onclick="event.stopPropagation();downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')">↓ Download</button>`
-                :`<span class="file-lib-unavail">No download<br><span style="font-size:10px">shared before this was added</span></span>`}`;
+        ${btnsHtml}`;
       feed.appendChild(row);
     });
   });
