@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -156,10 +155,31 @@ body {
   .platform-grid { grid-template-columns: 1fr; }
   .callout-row { flex-direction: column; gap: .4rem; }
 }
+.search-wrap{position:sticky;top:0;z-index:100;background:var(--surf);border-bottom:1px solid var(--border);padding:.6rem 1.25rem;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.search-wrap input{width:100%;max-width:680px;margin:0 auto;display:block;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.55rem 1rem .55rem 2.4rem;font-size:.95rem;color:var(--text);font-family:'Inter',sans-serif;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B718F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:.75rem center;}
+.search-wrap input:focus{border-color:var(--ac);}
+.no-results{text-align:center;padding:3rem 1rem;color:var(--dim);font-size:.95rem;display:none;}
 </style>
 </head>
 <body>
+<script>
+function guideSearch(q){
+  const term=q.trim().toLowerCase();
+  const sections=document.querySelectorAll('.guide-section');
+  let any=false;
+  sections.forEach(s=>{
+    const text=s.textContent.toLowerCase();
+    const show=!term||text.includes(term);
+    s.style.display=show?'':'none';
+    if(show)any=true;
+  });
+  document.getElementById('noResults').style.display=(!term||any)?'none':'block';
+}
+</script>
 
+<div class="search-wrap">
+  <input type="search" placeholder="Search the guide…" oninput="guideSearch(this.value)" autocomplete="off">
+</div>
 <div class="hero">
   <div class="hero-logo">NoteFlow <span>by Global Archery</span></div>
   <div class="hero-sub">Your team's shared workspace — notes, chats, and action items in one place</div>
@@ -167,8 +187,9 @@ body {
 </div>
 
 <div class="container">
+<div id="noResults" class="no-results">No results found — try a different word.</div>
 
-  <!-- SECTION 1 -->
+  <!-- SECTION 1 --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">1</div>
     <div class="section-title">Opening NoteFlow for the First Time</div>
@@ -199,7 +220,7 @@ body {
     <div class="tip"><strong>Tip:</strong> Add NoteFlow to your home screen so it opens like an app (see section 10 for how).</div>
   </div>
 
-  <!-- SECTION 2 -->
+  </div><!-- SECTION 2 --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">2</div>
     <div class="section-title">Finding Your Way Around</div>
@@ -231,7 +252,7 @@ body {
     <div class="callout-row"><div class="callout-num">✅</div><div class="callout-text"><strong>Actions</strong> — your personal to-do list of items assigned to you.</div></div>
   </div>
 
-  <!-- SECTION 3 -->
+  </div><!-- SECTION 3 --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">3</div>
     <div class="section-title">Reading and Posting Messages</div>
@@ -281,7 +302,7 @@ body {
     <div class="tip"><strong>Tip:</strong> To switch topics (channels), tap the <strong>Topics</strong> tab, then tap the channel you want — like #General or #Improvements.</div>
   </div>
 
-  <!-- SECTION 4 -->
+  </div><!-- SECTION 4 --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">4</div>
     <div class="section-title">Sending a Private Message</div>
@@ -330,7 +351,7 @@ body {
     <div class="tip"><strong>Unread messages</strong> show a colored dot next to the person's name in the Team tab so you know when you have something new.</div>
   </div>
 
-  <!-- SECTION 5 -->
+  </div><!-- SECTION 5 --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">5</div>
     <div class="section-title">Joining a Private Group</div>
@@ -373,7 +394,7 @@ body {
     <div class="tip"><strong>Done!</strong> The group appears in your sidebar and you can start chatting immediately.</div>
   </div>
 
-  <!-- SECTION 6 -->
+  </div><!-- SECTION 6 --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">6</div>
     <div class="section-title">Formatting Your Messages</div>
@@ -388,7 +409,7 @@ body {
     </div>
   </div>
 
-  <!-- SECTION 7 -->
+  </div><!-- SECTION 7 --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">7</div>
     <div class="section-title">Attaching a Photo or File</div>
@@ -404,7 +425,7 @@ body {
     </div>
   </div>
 
-  <!-- SECTION 8 -->
+  </div><!-- SECTION 8 --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">8</div>
     <div class="section-title">Collaborating on a Document</div>
@@ -457,11 +478,64 @@ body {
     <div class="tip"><strong>Rename or delete:</strong> Tap the <strong>⋯</strong> button next to any document name in the sidebar. Type RENAME or DELETE when prompted.<br><br><strong>Sharing existing files:</strong> To share a Word doc or Google Doc, just paste the link as a message — teammates tap it to open.</div>
   </div>
 
-  <!-- SECTION 9 -->
+  </div><!-- SECTION 9: Spreadsheets --><div class="guide-section">
   <div class="section-eyebrow">
     <div class="section-num">9</div>
+    <div class="section-title">Spreadsheets &amp; Linked Documents</div>
+  </div>
+  <div class="card">
+    <p>NoteFlow has a built-in spreadsheet editor — create one from scratch, upload a CSV or Excel file, import a Word doc as a note, upload a PDF to view, or link a Google Sheet directly.</p>
+
+    <div style="margin-top:1rem">
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:.5rem;color:var(--text)">📊 Creating a Spreadsheet</div>
+      <div class="step-row"><div class="step-bubble">1</div><div><strong>Tap 📊 in Documents</strong><p>In the sidebar (or Topics → Documents on mobile), tap the 📊 button next to the Documents label.</p></div></div>
+      <div class="step-row"><div class="step-bubble">2</div><div><strong>Give it a name</strong><p>Type the name in the title bar at the top — like "Price Sheet" or "Inventory."</p></div></div>
+      <div class="step-row"><div class="step-bubble">3</div><div><strong>Enter your data</strong><p>Tap any cell and start typing. Use Tab to move right, Enter to move down.</p></div></div>
+      <div class="step-row"><div class="step-bubble">4</div><div><strong>Tap Save</strong><p>Press the green Save button when done. Your team can open and view it any time.</p></div></div>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:.5rem;color:var(--text)">fx Formula Bar</div>
+      <p>A formula bar sits above the grid — it shows the selected cell reference (like <strong>B7</strong>) and the raw formula or value. You can type directly in the bar and press <strong>Enter</strong> to apply.</p>
+      <div class="tip" style="margin-top:.75rem"><strong>Supported formulas:</strong> <code>=SUM(B1:B6)</code>, <code>=AVERAGE(B1:B6)</code>, <code>=MAX(B1:B6)</code>, <code>=MIN(B1:B6)</code>, <code>=COUNT(B1:B6)</code>, <code>=IF(A1&gt;10,"Yes","No")</code>, and basic math like <code>=B2*C2</code>. Always start with <strong>=</strong> and close all parentheses.</div>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:.5rem;color:var(--text)">+Row / −Row / +Col / −Col Buttons</div>
+      <p>These buttons in the formula bar let you add or remove rows and columns — handy on phones where right-click isn't available. Select a cell first, then tap the button to insert or delete next to it.</p>
+      <div class="tip"><strong>On desktop</strong> you can also right-click any row number or column letter for a context menu with the same options.</div>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:.5rem;color:var(--text)">Copying a Formula Across Cells</div>
+      <p>Select a cell with a formula. A small blue square appears at the bottom-right corner of the selection — drag it down or across to copy the formula to other cells. The row and column references update automatically.</p>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:.5rem;color:var(--text)">↑ Uploading Files to Documents</div>
+      <div class="tip">
+        <strong>📊 CSV or Excel (.csv, .xlsx, .xls)</strong> — opens directly in the spreadsheet editor.<br><br>
+        <strong>📑 PDF (up to 5 MB)</strong> — stored and viewable full-screen inside NoteFlow.<br><br>
+        <strong>📄 Word doc (.docx)</strong> — the text content is extracted and saved as an editable NoteFlow document. Formatting is simplified but all the words come through.<br><br>
+        <strong>.doc (old format)</strong> — not supported. Open in Word, save as .docx, then upload.
+      </div>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:.5rem;color:var(--text)">🔗 Linking a Google Sheet, Google Doc, or any URL</div>
+      <div class="step-row"><div class="step-bubble">1</div><div><strong>Tap 🔗 in Documents</strong><p>The Link Document button is next to the 📊 and ↑ buttons.</p></div></div>
+      <div class="step-row"><div class="step-bubble">2</div><div><strong>Name it and paste the URL</strong><p>Give it a short name and paste in the Google Sheets link, Google Doc link, or any other URL.</p></div></div>
+      <div class="step-row"><div class="step-bubble">3</div><div><strong>Tap Add Link →</strong><p>It appears in Documents with a 🔗 icon. Tapping it opens it full-screen inside NoteFlow.</p></div></div>
+      <div class="tip"><strong>Google Sheets and Docs:</strong> Set sharing to "Anyone with the link can view" before adding. For Word docs and PDFs over 5 MB, upload to Google Drive first, then use the 🔗 Link feature with the Drive link.</div>
+    </div>
+  </div>
+
+  </div><!-- SECTION 10 --><div class="guide-section">
+  <div class="section-eyebrow">
+    <div class="section-num">10</div>
     <div class="section-title">Finding Shared Files</div>
   </div>
+
   <div class="card">
     <p>Every photo and file shared across any topic or group is collected in one place — the Files library. No more hunting through old messages.</p>
     <div class="mockup-wrap">
@@ -505,9 +579,9 @@ body {
     <div class="callout-row"><div class="callout-num">3</div><div class="callout-text">Tap <strong>↓ Download</strong> to save a file to your device.</div></div>
   </div>
 
-  <!-- SECTION 10 -->
+  </div><!-- SECTION 11 --><div class="guide-section">
   <div class="section-eyebrow">
-    <div class="section-num">10</div>
+    <div class="section-num">11</div>
     <div class="section-title">Add NoteFlow to Your Home Screen</div>
   </div>
   <div class="card">
@@ -532,6 +606,7 @@ body {
         </div>
       </div>
     </div>
+  </div>
   </div>
 
   <div class="divider"></div>
