@@ -297,9 +297,10 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .assign-chip.selected{border-color:var(--red);background:var(--redbg);color:var(--text);}
 .assign-chip .ac-dot{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font-size:7px;font-weight:700;color:#000;flex-shrink:0;}
-/* WORKSHEET OVERLAY */
-#worksheetOverlay{position:fixed;inset:0;z-index:900;background:var(--bg);display:none;flex-direction:column;}
-#worksheetOverlay.show{display:flex;}
+/* WORKSHEET / LINK OVERLAY */
+#worksheetOverlay,#linkOverlay{position:fixed;inset:0;z-index:900;background:var(--bg);display:none;flex-direction:column;}
+#worksheetOverlay.show,#linkOverlay.show{display:flex;}
+#linkFrame{flex:1;border:none;width:100%;}
 .ws-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;}
 .ws-back{background:none;border:none;color:var(--ac);font-size:14px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:6px;}
 .ws-back:hover{background:var(--acbg);}
@@ -307,7 +308,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 #worksheetTitle:focus{outline:none;border-color:var(--ac);}
 .ws-save{background:var(--ac);color:#000;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;}
 .ws-save:hover{background:var(--ac2);}
-#worksheetContainer{flex:1;overflow:auto;min-height:0;height:0;}
+#worksheetContainer{flex:1;overflow:hidden;min-height:0;height:0;}
 .entry-worksheet{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;}
 .entry-worksheet .ws-icon{font-size:22px;}
 .entry-worksheet .ws-info{flex:1}
@@ -752,7 +753,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <div id="groupList"><div class="sidebar-empty">No groups — create or join one</div></div>
       </div>
       <div class="sidebar-sec" id="docSection">
-        <div class="sidebar-label">Documents <span style="display:flex;gap:4px"><button class="add-btn" onclick="showNewDoc()" title="New document">+</button><button class="add-btn" onclick="openNewWorksheet()" title="New spreadsheet">📊</button><label class="add-btn" for="docFileInput" title="Upload CSV or Excel" style="cursor:pointer">↑</label></span></div>
+        <div class="sidebar-label">Documents <span style="display:flex;gap:4px"><button class="add-btn" onclick="showNewDoc()" title="New document">+</button><button class="add-btn" onclick="openNewWorksheet()" title="New spreadsheet">📊</button><button class="add-btn" onclick="showNewLink()" title="Link Google Sheet or external URL">🔗</button><label class="add-btn" for="docFileInput" title="Upload CSV or Excel" style="cursor:pointer">↑</label></span></div>
         <input type="file" id="docFileInput" accept=".csv,.xlsx,.xls" style="display:none">
         <div id="docList"><div class="sidebar-empty">No documents yet</div></div>
       </div>
@@ -943,6 +944,29 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <button class="ws-save" onclick="saveWorksheet()">Save</button>
   </div>
   <div id="worksheetContainer"></div>
+</div>
+
+<!-- link overlay -->
+<div id="linkOverlay">
+  <div class="ws-header">
+    <button class="ws-back" onclick="closeLinkOverlay()">← Back</button>
+    <span id="linkOverlayTitle" style="flex:1;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px;color:var(--text)"></span>
+    <a id="linkOverlayOpen" href="#" target="_blank" rel="noopener" class="ws-save" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px">↗ Open</a>
+  </div>
+  <iframe id="linkFrame" allow="fullscreen" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>
+</div>
+
+<!-- new link modal -->
+<div class="modal-overlay" id="newLinkModal" onclick="if(event.target===this)closeNewLink()">
+  <div class="modal">
+    <div style="font-size:1.8rem">🔗</div>
+    <div class="modal-title">Link Document</div>
+    <div class="modal-sub">Add a Google Sheet, Google Doc, or any URL to Documents</div>
+    <input class="modal-input" id="newLinkName" placeholder="Name (e.g. Price Sheet)" maxlength="60" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('newLinkUrl').focus()">
+    <input class="modal-input" id="newLinkUrl" placeholder="https://docs.google.com/…" autocomplete="off" onkeydown="if(event.key==='Enter')saveNewLink()">
+    <button class="modal-primary" onclick="saveNewLink()">Add Link →</button>
+    <button class="modal-secondary" onclick="closeNewLink()">Cancel</button>
+  </div>
 </div>
 
 <!-- passphrase modal -->
@@ -1205,7 +1229,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <div id="mobileGroupList"><div class="sidebar-empty">No groups yet</div></div>
   </div>
   <div class="mobile-panel-sec">
-    <div class="mobile-panel-label">Documents <span style="display:flex;gap:4px"><button class="add-btn" onclick="showNewDoc()">+</button><button class="add-btn" onclick="openNewWorksheet()">📊</button><label class="add-btn" for="docFileInput" style="cursor:pointer">↑</label></span></div>
+    <div class="mobile-panel-label">Documents <span style="display:flex;gap:4px"><button class="add-btn" onclick="showNewDoc()">+</button><button class="add-btn" onclick="openNewWorksheet()">📊</button><button class="add-btn" onclick="showNewLink()">🔗</button><label class="add-btn" for="docFileInput" style="cursor:pointer">↑</label></span></div>
     <div id="mobileDocList"><div class="sidebar-empty">No documents yet</div></div>
   </div>
   <div class="mobile-panel-sec">
@@ -1376,7 +1400,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v5.2';
+  const _ver='v5.3';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3110,6 +3134,45 @@ async function saveWorksheet(){
     console.error('saveWorksheet error:',e);
   }
 }
+// ── LINKED DOCS ───────────────────────────────────────
+function showNewLink(){
+  document.getElementById('newLinkModal').classList.add('show');
+  document.getElementById('newLinkName').value='';
+  document.getElementById('newLinkUrl').value='';
+  setTimeout(()=>document.getElementById('newLinkName').focus(),100);
+}
+function closeNewLink(){document.getElementById('newLinkModal').classList.remove('show');}
+function _toEmbedUrl(url){
+  if(!url)return url;
+  const m=url.match(/docs\.google\.com\/spreadsheets\/d\/([^/?\s]+)/);
+  if(m)return `https://docs.google.com/spreadsheets/d/${m[1]}/htmlview?rm=minimal`;
+  const md=url.match(/docs\.google\.com\/document\/d\/([^/?\s]+)/);
+  if(md)return `https://docs.google.com/document/d/${md[1]}/preview`;
+  return url;
+}
+async function saveNewLink(){
+  const name=document.getElementById('newLinkName').value.trim();
+  const url=document.getElementById('newLinkUrl').value.trim();
+  if(!name){toast('Name required',false);return;}
+  if(!url||!url.startsWith('http')){toast('Valid URL required',false);return;}
+  if(!window._fb){toast('Not connected',false);return;}
+  const{db,ref,set}=window._fb;
+  const id='doc_'+Date.now().toString(36);
+  await set(ref(db,'docs/meta/'+id),{name,type:'link',url,createdBy:myName,creatorId:myId,ts:Date.now()});
+  toast('Link added',true);
+  closeNewLink();
+}
+function openLinkDoc(docId){
+  const d=allDocs[docId]||{};
+  document.getElementById('linkOverlayTitle').textContent=d.name||'';
+  document.getElementById('linkFrame').src=_toEmbedUrl(d.url||'');
+  document.getElementById('linkOverlayOpen').href=d.url||'#';
+  document.getElementById('linkOverlay').classList.add('show');
+}
+function closeLinkOverlay(){
+  document.getElementById('linkOverlay').classList.remove('show');
+  setTimeout(()=>{document.getElementById('linkFrame').src='';},300);
+}
 // Wire up the sidebar file input for CSV/Excel → Documents
 document.addEventListener('DOMContentLoaded',()=>{
   const inp=document.getElementById('docFileInput');
@@ -3484,11 +3547,16 @@ function renderDocList(){
   const makeRow=(id,d,mobile)=>{
     const isActive=!mobile&&currentView==='doc'&&currentDocId===id;
     const isSheet=d.type==='worksheet';
-    const click=mobile?(isSheet?`openWorksheetDoc('${esc(id)}');showMobileTab('notes')`:`openDoc('${esc(id)}');showMobileTab('notes')`):(isSheet?`openWorksheetDoc('${esc(id)}')`:`openDoc('${esc(id)}')`);
+    const isLink=d.type==='link';
+    const click=mobile
+      ?(isSheet?`openWorksheetDoc('${esc(id)}');showMobileTab('notes')`:isLink?`openLinkDoc('${esc(id)}');document.getElementById('mobileTopicsPanel').classList.remove('show')`:`openDoc('${esc(id)}');showMobileTab('notes')`)
+      :(isSheet?`openWorksheetDoc('${esc(id)}')`:isLink?`openLinkDoc('${esc(id)}')`:`openDoc('${esc(id)}')`);
     const moreClick=`event.stopPropagation();showDocMenu('${esc(id)}')`;
     const groupLabel=d.groupId&&allGroups[d.groupId]?` <span style="font-size:9px;color:var(--dim);background:var(--card2);border-radius:4px;padding:1px 4px">👥${esc(allGroups[d.groupId].name||'')}</span>`:'';
+    const icon=isSheet?'📊':isLink?'🔗':'📄';
+    const iconColor=isSheet?'var(--ac)':isLink?'#007AFF':'var(--amber)';
     return `<div class="nav-row${isActive?' active':''}" onclick="${click}" style="padding-right:2px">
-      <span class="row-icon" style="color:${isSheet?'var(--ac)':'var(--amber)'}">${isSheet?'📊':'📄'}</span>
+      <span class="row-icon" style="color:${iconColor}">${icon}</span>
       <span class="row-label">${esc(d.name)}${groupLabel}</span>
       <button class="icon-btn" style="font-size:13px;color:var(--dim);padding:2px 4px;margin-left:auto;flex-shrink:0" onmousedown="event.stopPropagation()" onclick="${moreClick}" title="Rename or delete">⋯</button>
     </div>`;
