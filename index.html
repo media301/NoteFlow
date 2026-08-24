@@ -322,13 +322,14 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 #worksheetTitle:focus{outline:none;border-color:var(--ac);}
 .ws-save{background:var(--ac);color:#000;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;}
 .ws-save:hover{background:var(--ac2);}
-.formula-bar{display:flex;align-items:center;background:var(--surf);border-bottom:1px solid var(--brd);flex-shrink:0;height:34px;}
-.formula-ref{font-size:12px;font-family:monospace;font-weight:700;color:var(--text);min-width:52px;text-align:center;border-right:1px solid var(--brd);height:100%;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 6px;}
-.formula-sep{font-size:11px;color:var(--dim);font-style:italic;font-weight:600;width:28px;text-align:center;border-right:1px solid var(--brd);height:100%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.formula-input{flex:1;border:none;outline:none;background:transparent;font-size:13px;color:var(--text);padding:0 8px;font-family:monospace;height:100%;}
-.ws-row-btns{display:flex;align-items:center;gap:4px;padding:0 8px;border-left:1px solid var(--brd);height:100%;flex-shrink:0;}
-.ws-row-btn{background:var(--card2);border:1px solid var(--brd2);border-radius:5px;color:var(--dim2);font-size:11px;font-weight:600;padding:2px 7px;cursor:pointer;white-space:nowrap;font-family:inherit;}
-.ws-row-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--acbg);}
+/* formula bar always light to match spreadsheet */
+.formula-bar{display:flex;align-items:center;background:#f8f8f8;border-bottom:1px solid #ddd;flex-shrink:0;height:34px;color-scheme:light;}
+.formula-ref{font-size:12px;font-family:monospace;font-weight:700;color:#222;min-width:52px;text-align:center;border-right:1px solid #ddd;height:100%;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 6px;}
+.formula-sep{font-size:11px;color:#888;font-style:italic;font-weight:600;width:28px;text-align:center;border-right:1px solid #ddd;height:100%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.formula-input{flex:1;border:none;outline:none;background:#fff;font-size:13px;color:#111;padding:0 8px;font-family:monospace;height:100%;}
+.ws-row-btns{display:flex;align-items:center;gap:4px;padding:0 8px;border-left:1px solid #ddd;height:100%;flex-shrink:0;}
+.ws-row-btn{background:#eee;border:1px solid #ccc;border-radius:5px;color:#444;font-size:11px;font-weight:600;padding:2px 7px;cursor:pointer;white-space:nowrap;font-family:inherit;}
+.ws-row-btn:hover{background:#1FD69C;border-color:#1FD69C;color:#000;}
 #worksheetContainer{flex:1;overflow:auto;min-height:0;height:0;color-scheme:light;}
 .entry-worksheet{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;}
 .entry-worksheet .ws-icon{font-size:22px;}
@@ -1433,7 +1434,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v5.11';
+  const _ver='v5.12';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3130,8 +3131,9 @@ function _initSpreadsheet(data,columns){
   el.innerHTML='';_wsInst=null;
   // Force explicit pixel height so jSpreadsheet can measure the container
   const hdr=document.querySelector('.ws-header');
-  const availH=window.innerHeight-(hdr?hdr.offsetHeight:50);
-  el.style.height=Math.max(availH,300)+'px';
+  const fb=document.getElementById('formulaBar');
+  const usedH=(hdr?hdr.offsetHeight:50)+(fb?fb.offsetHeight:34);
+  el.style.height=Math.max(window.innerHeight-usedH,300)+'px';
   const MINR=100,MINC=26;
   const rows=Math.max((data||[]).length,MINR);
   const cols=Math.max((data[0]||[]).length,MINC);
