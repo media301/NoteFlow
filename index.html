@@ -122,6 +122,33 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .who-task-btn{background:none;border:1px solid var(--brd2);border-radius:6px;font-size:10px;color:var(--dim2);cursor:pointer;padding:2px 6px;white-space:nowrap;flex-shrink:0;opacity:0;transition:opacity .12s;font-family:inherit;}
 .who-row:hover .who-task-btn{opacity:1;}
 .who-task-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--acbg);}
+/* compact task cards */
+.task-group-hdr{display:flex;align-items:center;gap:6px;padding:8px 4px 5px;cursor:pointer;user-select:none;border-radius:6px;transition:background .12s;}
+.task-group-hdr:hover{background:var(--card);}
+.task-group-arrow{font-size:9px;color:var(--dim);transition:transform .2s;flex-shrink:0;}
+.task-group-arrow.collapsed{transform:rotate(-90deg);}
+.task-group-label{font-size:11px;font-weight:600;color:var(--dim2);letter-spacing:.02em;}
+.task-group-count{font-size:10px;color:var(--dim);background:var(--card2);border-radius:20px;padding:1px 7px;margin-left:auto;}
+.task-group-body{display:flex;flex-direction:column;gap:3px;margin-bottom:4px;padding-left:4px;}
+.task-group-body.collapsed{display:none;}
+.task-card{display:flex;align-items:flex-start;gap:10px;background:var(--card);border-radius:10px;padding:10px 12px;border-left:3px solid transparent;transition:background .15s;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.task-card:hover{background:var(--card2);}
+.task-card.done{opacity:.6;}
+.task-chk{flex-shrink:0;width:20px;height:20px;border-radius:50%;border:2px solid var(--dim);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;transition:all .18s;margin-top:1px;color:transparent;}
+.task-chk:hover{border-color:var(--ac);}
+.task-chk.done{background:var(--ac);border-color:var(--ac);color:#000;}
+.task-body{flex:1;min-width:0;}
+.task-text{font-size:13.5px;color:var(--text);line-height:1.4;word-break:break-word;font-weight:450;}
+.task-text.done{text-decoration:line-through;color:var(--dim);}
+.task-meta{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap;}
+.task-by{font-size:10px;color:var(--dim);}
+.task-assignee{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--dim2);background:var(--card2);border-radius:20px;padding:2px 7px;}
+.task-assignee-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.task-done-by{font-size:10px;color:var(--ac);font-style:italic;}
+.task-side{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.task-side-btn{background:none;border:none;border-radius:6px;font-size:11px;color:var(--dim);cursor:pointer;padding:3px 6px;white-space:nowrap;font-family:inherit;transition:all .12s;opacity:0;}
+.task-card:hover .task-side-btn{opacity:1;}
+.task-side-btn:hover{color:var(--ac);background:var(--acbg);}
 .nav-row{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:8px;
          cursor:pointer;font-size:12.5px;color:var(--dim2);font-weight:500;
          transition:all .12s;margin-bottom:2px;}
@@ -497,6 +524,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   .add-reaction-btn{opacity:1;}
   .who-task-btn{opacity:1;}
   .dm-hint{opacity:1;}
+  .task-side-btn{opacity:1;}
   .pane-actions{display:none;}
   #groupMembersBtn{display:none !important;}
   #groupMembersBtn.grp-active{display:flex !important;}
@@ -1184,7 +1212,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v2.7';
+  const _ver='v2.8';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1611,6 +1639,42 @@ function switchToActionItems(){
     renderActionItems(allEntries,groupEntries);
   }).catch(()=>renderActionItems(allEntries));
 }
+function buildTaskCard(id,e,basePath,color){
+  const card=document.createElement('div');
+  card.className='task-card'+(e.completed?' done':'');
+  card.style.borderLeftColor=color||'var(--brd2)';
+  card.dataset.basePath=basePath;
+  const assignees=getAssignees(e);
+  const assigneeHtml=assignees.map(u=>`<span class="task-assignee"><span class="task-assignee-dot" style="background:${u.color}"></span>${esc(u.name.split(' ')[0])}</span>`).join('');
+  const doneByHtml=e.completed&&e.completedBy?`<span class="task-done-by">✓ Done by ${esc(e.completedBy.name)}</span>`:'';
+  const text=e.text||e.title||'';
+  card.innerHTML=`
+    <button class="task-chk${e.completed?' done':''}" title="${e.completed?'Mark incomplete':'Mark complete'}">${e.completed?'✓':''}</button>
+    <div class="task-body">
+      <div class="task-text${e.completed?' done':''}">${esc(text)}</div>
+      <div class="task-meta">
+        <span class="task-by">by ${esc(e.name||'Unknown')}</span>
+        ${assigneeHtml}
+        ${doneByHtml}
+      </div>
+    </div>
+    <div class="task-side">
+      ${!e.completed?`<button class="task-side-btn assign-btn">👤 Assign</button>`:''}
+    </div>`;
+  card.querySelector('.task-chk').addEventListener('click',ev=>{
+    ev.stopPropagation();
+    if(!window._fb)return;
+    const{db,ref,set}=window._fb;
+    const isComplete=!e.completed;
+    const updatedE={...e,completed:isComplete,completedBy:isComplete?{id:myId,name:myName}:null,completedAt:isComplete?Date.now():null};
+    set(ref(db,basePath+'/entries/'+id),updatedE);
+    const newCard=buildTaskCard(id,updatedE,basePath,color);
+    card.replaceWith(newCard);
+  });
+  const ab=card.querySelector('.assign-btn');
+  if(ab)ab.addEventListener('click',ev=>{ev.stopPropagation();showAssignMorePopover(card,id,e);});
+  return card;
+}
 function renderActionItems(topicEntries,groupEntries){
   if(currentView!=='actions')return;
   window._lastActionData={topicEntries,groupEntries};
@@ -1670,25 +1734,40 @@ function renderActionItems(topicEntries,groupEntries){
   const assignedToMe=incomplete.filter(({e})=>getAssignees(e).some(u=>u.id===myId));
   const mine=incomplete.filter(({e})=>e.authorId===myId&&!getAssignees(e).some(u=>u.id===myId));
   const others=incomplete.filter(({e})=>e.authorId!==myId&&!getAssignees(e).some(u=>u.id===myId));
-  const addSection=(label,color,list)=>{
+  const addSection=(label,color,list,defaultCollapsed)=>{
     if(!list.length)return;
     const hdr=document.createElement('div');
-    hdr.style.cssText=`font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${color};padding:4px 2px 6px;`;
+    hdr.style.cssText=`font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${color};padding:8px 2px 4px;`;
     hdr.textContent=label;feed.appendChild(hdr);
-    list.forEach(({id,e,source,topicId,basePath})=>{
-      const div=buildEntry(id,e,false);
-      div.dataset.basePath=basePath||(allGroups[topicId]?'groups/':'topics/')+topicId;
-      div.style.borderLeft=`3px solid ${color}`;div.style.paddingLeft='6px';
-      const src=document.createElement('div');
-      src.style.cssText='font-size:10px;color:var(--dim);margin-bottom:2px;';
-      src.textContent=source;div.prepend(src);
-      feed.appendChild(div);
+    // group by source
+    const bySource={};
+    list.forEach(item=>{const s=item.source||'Other';(bySource[s]=bySource[s]||[]).push(item);});
+    Object.entries(bySource).forEach(([src,items])=>{
+      const gkey=label+'::'+src;
+      const isCollapsed=window._taskGroupCollapsed&&window._taskGroupCollapsed[gkey]!=null
+        ?window._taskGroupCollapsed[gkey]:!!defaultCollapsed;
+      const ghdr=document.createElement('div');ghdr.className='task-group-hdr';
+      const arrow=document.createElement('span');arrow.className='task-group-arrow'+(isCollapsed?' collapsed':'');arrow.textContent='▼';
+      const lbl=document.createElement('span');lbl.className='task-group-label';lbl.textContent=src;
+      const cnt=document.createElement('span');cnt.className='task-group-count';cnt.textContent=items.length;
+      ghdr.append(arrow,lbl,cnt);feed.appendChild(ghdr);
+      const body=document.createElement('div');body.className='task-group-body'+(isCollapsed?' collapsed':'');feed.appendChild(body);
+      ghdr.addEventListener('click',()=>{
+        const c=arrow.classList.toggle('collapsed');
+        body.classList.toggle('collapsed',c);
+        if(!window._taskGroupCollapsed)window._taskGroupCollapsed={};
+        window._taskGroupCollapsed[gkey]=c;
+      });
+      items.forEach(({id,e,topicId,basePath})=>{
+        const bp=basePath||(allGroups[topicId]?'groups/':'topics/')+topicId;
+        body.appendChild(buildTaskCard(id,e,bp,color));
+      });
     });
   };
-  addSection('Assigned to Me','#F0605A',assignedToMe);
-  addSection('My Tasks','var(--amber)',mine);
-  addSection('Team Tasks','var(--dim)',others);
-  addSection('Completed','var(--ac)',done);
+  addSection('Assigned to Me','#F0605A',assignedToMe,false);
+  addSection('My Tasks','var(--amber)',mine,false);
+  addSection('Team Tasks','var(--dim2)',others,false);
+  addSection('Completed','var(--ac)',done,true);
   const fw=document.getElementById('feed');if(fw)fw.scrollTop=0;
   forceIosRepaint();
 }
@@ -2147,8 +2226,10 @@ function showAssignMorePopover(entryDiv,entryId,e){
     const updatedE={...e,assignedTo:selected.length?selected:null};
     set(ref(db,basePath+'/entries/'+entryId),updatedE);
     pop.remove();
-    // Optimistic update
-    const newEl=buildEntry(entryId,updatedE,currentView==='dm');
+    // Optimistic update — use compact card in tasks view
+    const newEl=entryDiv.classList.contains('task-card')
+      ?buildTaskCard(entryId,updatedE,basePath,entryDiv.style.borderLeftColor)
+      :buildEntry(entryId,updatedE,currentView==='dm');
     if(entryDiv.dataset.basePath)newEl.dataset.basePath=entryDiv.dataset.basePath;
     entryDiv.replaceWith(newEl);
     toast('Assignees updated',true);
