@@ -1213,7 +1213,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v3.4';
+  const _ver='v3.5';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1751,6 +1751,35 @@ function renderActionItems(topicEntries,groupEntries){
   hideFeedEmpty(empty);
   const incomplete=filtered.filter(({e})=>!e.completed);
   const done=filtered.filter(({e})=>e.completed);
+  // When filtered by a specific person, skip sectioning — just show their tasks flat
+  if(actionFilterUserId){
+    const person=allProfiles[actionFilterUserId];
+    const label=actionFilterUserId===myId?'My Tasks':(person?person.name.split(' ')[0]+"'s Tasks":'Tasks');
+    const addSection=(lbl,color,list,defaultCollapsed)=>{
+      if(!list.length)return;
+      const hdr=document.createElement('div');
+      hdr.style.cssText=`font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${color};padding:8px 2px 4px;`;
+      hdr.textContent=lbl;feed.appendChild(hdr);
+      const bySource={};
+      list.forEach(item=>{const s=item.source||'Other';(bySource[s]=bySource[s]||[]).push(item);});
+      Object.entries(bySource).forEach(([src,its])=>{
+        const gkey=lbl+'::'+src;
+        const isCollapsed=window._taskGroupCollapsed&&window._taskGroupCollapsed[gkey]!=null?window._taskGroupCollapsed[gkey]:!!defaultCollapsed;
+        const ghdr=document.createElement('div');ghdr.className='task-group-hdr';
+        const arrow=document.createElement('span');arrow.className='task-group-arrow'+(isCollapsed?' collapsed':'');arrow.textContent='▼';
+        const lbel=document.createElement('span');lbel.className='task-group-label';lbel.textContent=src;
+        const cnt=document.createElement('span');cnt.className='task-group-count';cnt.textContent=its.length;
+        ghdr.append(arrow,lbel,cnt);feed.appendChild(ghdr);
+        const body=document.createElement('div');body.className='task-group-body'+(isCollapsed?' collapsed':'');feed.appendChild(body);
+        ghdr.addEventListener('click',()=>{const c=arrow.classList.toggle('collapsed');body.classList.toggle('collapsed',c);if(!window._taskGroupCollapsed)window._taskGroupCollapsed={};window._taskGroupCollapsed[gkey]=c;});
+        its.forEach(({id,e,topicId,basePath})=>{const bp=basePath||(allGroups[topicId]?'groups/':'topics/')+topicId;body.appendChild(buildTaskCard(id,e,bp,color));});
+      });
+    };
+    addSection(label,'var(--ac)',incomplete,false);
+    addSection('Completed','var(--dim)',done,true);
+    const fw=document.getElementById('feed');if(fw)fw.scrollTop=0;
+    forceIosRepaint();return;
+  }
   const assignedToMe=incomplete.filter(({e})=>getAssignees(e).some(u=>u.id===myId));
   const mine=incomplete.filter(({e})=>e.authorId===myId&&!getAssignees(e).some(u=>u.id===myId));
   const others=incomplete.filter(({e})=>e.authorId!==myId&&!getAssignees(e).some(u=>u.id===myId));
