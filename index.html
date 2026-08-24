@@ -119,6 +119,9 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .who-you{font-size:10px;color:var(--dim);}
 .dm-hint{font-size:10px;color:var(--dim);opacity:0;transition:opacity .12s;}
 .who-row:hover .dm-hint{opacity:1;}
+.who-task-btn{background:none;border:1px solid var(--brd2);border-radius:6px;font-size:10px;color:var(--dim2);cursor:pointer;padding:2px 6px;white-space:nowrap;flex-shrink:0;opacity:0;transition:opacity .12s;font-family:inherit;}
+.who-row:hover .who-task-btn{opacity:1;}
+.who-task-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--acbg);}
 .nav-row{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:8px;
          cursor:pointer;font-size:12.5px;color:var(--dim2);font-weight:500;
          transition:all .12s;margin-bottom:2px;}
@@ -341,6 +344,24 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
               animation:recfab 1.5s ease-in-out infinite;}
 @keyframes recfab{0%,100%{box-shadow:0 0 0 0 var(--redglow)}50%{box-shadow:0 0 0 6px rgba(240,96,90,0)}}
 .tool-btn.action-on{background:var(--amberbg);border-color:rgba(245,163,66,.5);color:var(--amber);}
+.tool-btn.cl-on{background:var(--acbg);border-color:rgba(31,214,156,.5);color:var(--ac);}
+.action-toggle-bar.cl-bar{background:var(--acbg);border-bottom-color:rgba(31,214,156,.15);}
+.action-toggle-label.cl-label{color:var(--ac);}
+.checklist-builder{display:none;padding:8px 1.25rem;background:var(--acbg);border-bottom:1px solid rgba(31,214,156,.15);flex-direction:column;gap:6px;}
+.checklist-builder.show{display:flex;}
+.cl-input-row{display:flex;align-items:center;gap:6px;}
+.cl-item-input{flex:1;background:var(--card);border:1px solid var(--brd2);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;padding:5px 9px;outline:none;}
+.cl-item-input:focus{border-color:var(--ac);}
+.cl-remove-btn{background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;line-height:1;padding:2px 5px;flex-shrink:0;}
+.cl-add-btn{background:none;border:none;color:var(--ac);font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;padding:2px 0;align-self:flex-start;}
+.checklist-card{display:flex;flex-direction:column;gap:5px;margin-top:4px;}
+.cl-item{display:flex;align-items:center;gap:7px;}
+.cl-check{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1.5px solid var(--dim);border-radius:4px;background:none;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;transition:all .15s;color:transparent;padding:0;}
+.cl-check.done{background:var(--ac);border-color:var(--ac);color:#000;}
+.cl-text{font-size:13px;line-height:1.4;flex:1;}
+.cl-text.done{text-decoration:line-through;color:var(--dim);}
+.cl-done-by{font-size:11px;color:var(--ac);font-weight:600;white-space:nowrap;}
+.cl-title{font-size:13px;font-weight:700;margin-bottom:3px;}
 .text-row{display:flex;align-items:flex-end;gap:7px;padding:7px 1.25rem 11px;}
 .input-wrap{flex:1;background:var(--card);border:1.5px solid var(--brd2);border-radius:18px;
             padding:9px 13px;transition:border-color .15s;}
@@ -458,6 +479,8 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   .tool-btn{padding:6px 9px;font-size:12px;}
   .text-row{padding:6px .75rem 10px;}
   .entry-actions{opacity:1;}
+  .who-task-btn{opacity:1;}
+  .dm-hint{opacity:1;}
   .pane-actions{display:none;}
   #groupMembersBtn{display:none !important;}
   #groupMembersBtn.grp-active{display:flex !important;}
@@ -686,6 +709,16 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <div id="assignPicker" style="display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;padding:0 4px;"></div>
         <button class="action-x" onclick="cancelActionTag()">×</button>
       </div>
+      <div class="action-toggle-bar cl-bar" id="checklistBar">
+        <span style="font-size:14px">📋</span>
+        <span class="action-toggle-label cl-label">Checklist</span>
+        <div id="checklistAssignPicker" style="display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;padding:0 4px;"></div>
+        <button class="action-x" onclick="cancelChecklist()">×</button>
+      </div>
+      <div class="checklist-builder" id="checklistBuilder">
+        <div id="checklistItemsList"></div>
+        <button class="cl-add-btn" onclick="addChecklistItemInput()">＋ Add item</button>
+      </div>
       <div class="action-toolbar" id="actionToolbar">
         <button class="tool-btn" id="dictateBtn" onclick="toggleRec()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -696,6 +729,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
           Attach File
         </label>
         <button class="tool-btn" id="actionBtn" onclick="toggleActionTag()">✅ Action Item</button>
+        <button class="tool-btn" id="checklistBtn" onclick="toggleChecklist()">📋 Checklist</button>
         <div style="width:1px;height:16px;background:var(--brd2);flex-shrink:0;margin:0 2px"></div>
         <button class="tool-btn fmt-btn" onmousedown="event.preventDefault()" onclick="fmtWrap('**','**')" title="Bold"><strong>B</strong></button>
         <button class="tool-btn fmt-btn" onmousedown="event.preventDefault()" onclick="fmtWrap('_','_')" title="Italic"><em style="font-style:italic">I</em></button>
@@ -749,6 +783,17 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <input class="modal-input" id="passInput" type="password" placeholder="Passphrase…" autocomplete="off" onkeydown="if(event.key==='Enter')submitPassphrase()">
     <div id="passError" style="font-size:12px;color:var(--red);min-height:18px;text-align:center;margin-top:-8px"></div>
     <button class="modal-primary" onclick="submitPassphrase()">Enter →</button>
+  </div>
+</div>
+
+<!-- assign task modal -->
+<div class="modal-overlay" id="assignTaskModal">
+  <div class="modal">
+    <div style="font-size:1.8rem">✅</div>
+    <div class="modal-title">Assign Task to <span id="atModalName" style="color:var(--ac)"></span></div>
+    <textarea class="modal-input" id="atTaskInput" placeholder="What's the task?" rows="3" style="resize:none;min-height:70px;font-family:inherit"></textarea>
+    <button class="modal-primary" onclick="submitAssignedTask()">Assign Task →</button>
+    <button class="modal-secondary" onclick="closeAssignTaskModal()">Cancel</button>
   </div>
 </div>
 
@@ -995,7 +1040,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 const TEAM_PASSPHRASES=['Group20']; // ← add/remove phrases here
 const EMOJIS=['👍','❤️','😂','🎉','💡'];
 let myName='',myInitials='',myColor='',myId='';
-let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,assignedUsers=[];
+let recog=null,recording=false,toastT=null,replyingTo=null,isActionTag=false,assignedUsers=[],isChecklist=false,checklistAssignedUsers=[];
 let currentView='topic',currentTopicId='general',currentDmWith=null,currentGroupId=null,currentDocId=null;
 let allTopics={},allUsers={},allEntries={},allProfiles={},allGroups={},allDmsData={},allDocs={};
 let myGroupIds=new Set();
@@ -1111,7 +1156,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v2.1';
+  const _ver='v2.3';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1266,6 +1311,7 @@ function renderTeam(){
       </div>
       <span class="who-name">${esc(p.name)}${isMe?' <span class="who-you">you</span>':''}</span>
       ${!isMe?`<span class="dm-hint">${isOnline?'online':'offline'}</span>`:''}
+      ${!isMe?`<button class="who-task-btn" onclick="event.stopPropagation();openAssignTaskModal('${esc(id)}','${esc(p.name)}','${esc(p.initials)}','${esc(p.color)}')" title="Assign task to ${esc(p.name)}">✅ Task</button>`:''}
     </div>`;
   }).join('')||'<div class="sidebar-empty">Just you here</div>';
   const mwl=document.getElementById('mobileWhoList');if(mwl)mwl.innerHTML=teamRows;
@@ -1284,6 +1330,7 @@ function renderOnline(recent){
        <div class="who-badge" style="background:${u.color}">${esc(u.initials)}</div>
        <span class="who-name">${esc(u.name)}${id===myId?'<span class="who-you" style="margin-left:4px">you</span>':''}</span>
        ${id!==myId?'<span class="dm-hint">DM</span>':''}
+       ${id!==myId?`<button class="who-task-btn" onclick="event.stopPropagation();openAssignTaskModal('${esc(id)}','${esc(u.name)}','${esc(u.initials)}','${esc(u.color)}')" title="Assign task">✅</button>`:''}
      </div>`).join('')||'<div class="sidebar-empty">Just you here</div>';
   document.getElementById('whoOnline').innerHTML=rows;
   renderTeam();
@@ -1333,7 +1380,7 @@ function switchTopic(topicId){
   document.getElementById('actionItemsRow').classList.remove('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
   document.getElementById('feedEmptyMsg').textContent='Hi! I\'m Clippy. Add a note below, tap the mic to dictate, or click a teammate to message them privately.';
-  clearFeed();cancelReply();cancelActionTag();
+  clearFeed();cancelReply();cancelActionTag();cancelChecklist();
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
     set(ref(db,'topics/meta/'+topicId+'/lastActivity'),Date.now());
@@ -1356,6 +1403,29 @@ function switchTopic(topicId){
   }
   renderTopicList();closeSheet();
 }
+
+// ── ASSIGN TASK MODAL ────────────────────────────────
+let _assignTarget=null;
+function openAssignTaskModal(userId,name,initials,color){
+  _assignTarget={id:userId,name,initials,color};
+  document.getElementById('atModalName').textContent=name.split(' ')[0];
+  document.getElementById('atTaskInput').value='';
+  document.getElementById('assignTaskModal').classList.add('show');
+  setTimeout(()=>document.getElementById('atTaskInput').focus(),80);
+}
+function closeAssignTaskModal(){document.getElementById('assignTaskModal').classList.remove('show');_assignTarget=null;}
+function submitAssignedTask(){
+  const text=document.getElementById('atTaskInput').value.trim();
+  if(!text||!_assignTarget||!window._fb)return;
+  const{db,ref,push}=window._fb;
+  const entry={type:'text',text,isAction:true,assignedTo:[_assignTarget],name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()};
+  const topicId=allTopics['general']?'general':(Object.keys(allTopics)[0]||'general');
+  push(ref(db,'topics/'+topicId+'/entries'),entry);
+  const assigneeName=_assignTarget.name.split(' ')[0];
+  closeAssignTaskModal();
+  toast('Task assigned to '+assigneeName+'!',true);
+}
+document.getElementById('atTaskInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))submitAssignedTask();});
 
 function showNewTopic(){document.getElementById('newTopicModal').classList.add('show');setTimeout(()=>document.getElementById('newTopicInput').focus(),80);}
 function closeNewTopic(){document.getElementById('newTopicModal').classList.remove('show');document.getElementById('newTopicInput').value='';}
@@ -1400,11 +1470,11 @@ function openDm(userId,name,initials,color,existingKey){
   document.getElementById('noteInput').placeholder=`Message ${name}…`;
   document.getElementById('inputArea').style.display='';
   document.getElementById('actionToolbar').style.display='';
-  document.getElementById('actionBtn').style.display='none';
+  document.getElementById('actionBtn').style.display='';
   document.getElementById('actionItemsRow')?.classList.remove('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
   document.getElementById('feedEmptyMsg').textContent=`Send ${name} a message to start the conversation.`;
-  clearFeed();cancelReply();cancelActionTag();forceIosRepaint();
+  clearFeed();cancelReply();cancelActionTag();cancelChecklist();forceIosRepaint();
   if(window._fb){
     const{db,ref,onValue,set}=window._fb;
     set(ref(db,'dms/'+key+'/members/'+userId),{name,initials,color});
@@ -1522,6 +1592,17 @@ function renderActionItems(topicEntries,groupEntries){
       Object.entries(entries).forEach(([id,e])=>{if(e.isAction)items.push({id,e,topicId:gid,source:'👥'+(allGroups[gid]?.name||gid)});});
     });
   }
+  if(allDmsData){
+    Object.entries(allDmsData).forEach(([key,dmData])=>{
+      if(!dmData.entries)return;
+      const parts=key.split('__');
+      const otherId=parts.find(p=>p!==myId)||parts[0];
+      const other=allProfiles[otherId]||{};
+      Object.entries(dmData.entries).forEach(([id,e])=>{
+        if(e.isAction)items.push({id,e,topicId:key,source:'💬 '+(other.name||'DM'),basePath:'dms/'+key});
+      });
+    });
+  }
   items.sort((a,b)=>(b.e.ts||0)-(a.e.ts||0));
   const getAssignees=e=>e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];
   // Filter bar
@@ -1558,9 +1639,9 @@ function renderActionItems(topicEntries,groupEntries){
     const hdr=document.createElement('div');
     hdr.style.cssText=`font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${color};padding:4px 2px 6px;`;
     hdr.textContent=label;feed.appendChild(hdr);
-    list.forEach(({id,e,source,topicId})=>{
+    list.forEach(({id,e,source,topicId,basePath})=>{
       const div=buildEntry(id,e,false);
-      div.dataset.basePath=(allGroups[topicId]?'groups/':'topics/')+topicId;
+      div.dataset.basePath=basePath||(allGroups[topicId]?'groups/':'topics/')+topicId;
       div.style.borderLeft=`3px solid ${color}`;div.style.paddingLeft='6px';
       const src=document.createElement('div');
       src.style.cssText='font-size:10px;color:var(--dim);margin-bottom:2px;';
@@ -1804,6 +1885,7 @@ function renderFeed(data,isDm=false){
     if(existing.has(id)){
       const el=feed.querySelector(`.note-entry[data-id="${id}"]`);
       if(el){
+        if(e.type==='checklist'){const newEl=buildEntry(id,e,isDm);if(el.dataset.basePath)newEl.dataset.basePath=el.dataset.basePath;el.replaceWith(newEl);return;}
         const wasComplete=!!el.querySelector('.complete-btn.done');
         if(e.isAction&&wasComplete!==!!e.completed){
           const newEl=buildEntry(id,e,isDm);
@@ -1848,6 +1930,11 @@ function buildEntry(id,e,isDm){
   else if(e.type==='file')content=e.src
     ?`<div class="entry-file" onclick="downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')" style="cursor:pointer" title="Click to download"><span>${esc(e.icon||'📄')}</span><span style="flex:1">${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--ac);font-weight:600">↓ Download</span></div>`
     :`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--dim)">no download</span></div>`;
+  else if(e.type==='checklist'){
+    const items=e.items||{};
+    const rows=Object.entries(items).map(([k,item])=>`<div class="cl-item" data-key="${k}"><button class="cl-check${item.done?' done':''}">${item.done?'✓':''}</button><span class="cl-text${item.done?' done':''}">${esc(item.text||'')}</span>${item.done&&item.doneBy?`<span class="cl-done-by">· ${esc(item.doneBy)}</span>`:''}</div>`).join('');
+    content=(e.title?`<div class="cl-title">${esc(e.title)}</div>`:'')+`<div class="checklist-card">${rows}</div>`;
+  }
   else content=`<div class="entry-text">${parseMentions(e.text||'')}</div>`;
   const bubbleClass='entry-bubble'+(e.isAction?' is-action':'')+(e.isAction&&e.completed?' is-done':'')+(e.pinned?' is-pinned':'');
   div.innerHTML=`
@@ -1862,7 +1949,7 @@ function buildEntry(id,e,isDm){
         ${e.pinned?'<span class="pin-badge">📌</span>':''}
         <div class="entry-actions">
           ${!isDm?`<button class="entry-act-btn reply-btn">↩ Reply</button>`:''}
-          ${!isDm&&!e.isAction?`<button class="entry-act-btn action-make-btn">✅ Action</button>`:''}
+          ${!e.isAction?`<button class="entry-act-btn action-make-btn">✅ Action</button>`:''}
           ${isMe&&(e.type==='text'||e.isAction)?`
             <button class="entry-act-btn edit-btn">✏ Edit</button>
             <button class="entry-act-btn${e.pinned?' pin-active':''} pin-btn">${e.pinned?'📌 Unpin':'📌 Pin'}</button>`:''}
@@ -1880,6 +1967,10 @@ function buildEntry(id,e,isDm){
   const db2=div.querySelector('.del-btn');if(db2)db2.addEventListener('click',()=>deleteEntry(id));
   const cb=div.querySelector('.complete-btn');if(cb)cb.addEventListener('click',()=>toggleComplete(div,id,e));
   const amb=div.querySelector('.action-make-btn');if(amb)amb.addEventListener('click',ev=>{ev.stopPropagation();showActionPopover(div,id,e);});
+  div.querySelectorAll('.cl-item').forEach(itemEl=>{
+    const key=itemEl.dataset.key;const item=(e.items||{})[key];
+    if(item){const btn=itemEl.querySelector('.cl-check');if(btn)btn.addEventListener('click',()=>toggleChecklistItem(div,id,key,item));}
+  });
   return div;
 }
 
@@ -2026,6 +2117,76 @@ function toggleActionTag(){
 }
 function cancelActionTag(){isActionTag=false;assignedUsers=[];document.getElementById('actionBtn').classList.remove('action-on');document.getElementById('actionBar').classList.remove('show');}
 
+function toggleChecklist(){
+  isChecklist=!isChecklist;
+  document.getElementById('checklistBtn').classList.toggle('cl-on',isChecklist);
+  document.getElementById('checklistBar').classList.toggle('show',isChecklist);
+  document.getElementById('checklistBuilder').classList.toggle('show',isChecklist);
+  if(isChecklist){
+    if(isActionTag)cancelActionTag();
+    populateChecklistAssignPicker();
+    const list=document.getElementById('checklistItemsList');
+    if(!list.children.length)addChecklistItemInput();
+  }
+}
+function cancelChecklist(){
+  isChecklist=false;checklistAssignedUsers=[];
+  document.getElementById('checklistBtn').classList.remove('cl-on');
+  document.getElementById('checklistBar').classList.remove('show');
+  document.getElementById('checklistBuilder').classList.remove('show');
+  document.getElementById('checklistItemsList').innerHTML='';
+}
+function addChecklistItemInput(){
+  const list=document.getElementById('checklistItemsList');
+  const row=document.createElement('div');row.className='cl-input-row';
+  const inp=document.createElement('input');inp.type='text';inp.className='cl-item-input';inp.placeholder='Item…';
+  inp.addEventListener('keydown',ev=>{
+    if(ev.key==='Enter'){ev.preventDefault();addChecklistItemInput();setTimeout(()=>{const inputs=list.querySelectorAll('.cl-item-input');inputs[inputs.length-1]?.focus();},0);}
+    if(ev.key==='Backspace'&&!inp.value&&list.children.length>1){row.remove();}
+  });
+  const rm=document.createElement('button');rm.className='cl-remove-btn';rm.textContent='×';rm.type='button';
+  rm.onclick=()=>{if(list.children.length>1)row.remove();};
+  row.appendChild(inp);row.appendChild(rm);list.appendChild(row);
+  setTimeout(()=>inp.focus(),0);
+}
+function populateChecklistAssignPicker(){
+  checklistAssignedUsers=[];
+  const picker=document.getElementById('checklistAssignPicker');
+  picker.innerHTML='';
+  const profiles=Object.entries(allProfiles).filter(([id])=>id!==myId);
+  if(!profiles.length){picker.innerHTML='<span style="font-size:12px;color:var(--dim);flex:1">No teammates yet</span>';return;}
+  profiles.forEach(([id,p])=>{
+    const chip=document.createElement('div');
+    chip.style.cssText=`background:${p.color||'#888'};width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;opacity:.45;transition:opacity .15s;`;
+    chip.textContent=p.initials||'?';chip.title=p.name||'';
+    chip.onclick=()=>{
+      const idx=checklistAssignedUsers.findIndex(u=>u.id===id);
+      if(idx>=0){checklistAssignedUsers.splice(idx,1);chip.style.opacity='.45';}
+      else{checklistAssignedUsers.push({id,name:p.name,initials:p.initials,color:p.color});chip.style.opacity='1';}
+    };
+    picker.appendChild(chip);
+  });
+}
+function toggleChecklistItem(entryDiv,entryId,itemKey,item){
+  if(!window._fb)return;
+  const{db,ref,set}=window._fb;
+  const basePath=entryDiv.dataset.basePath||currentBasePath();
+  const isDone=!item.done;
+  const updated={...item,done:isDone,doneBy:isDone?myName:null,doneAt:isDone?Date.now():null};
+  set(ref(db,basePath+'/entries/'+entryId+'/items/'+itemKey),updated);
+  const itemEl=entryDiv.querySelector(`.cl-item[data-key="${itemKey}"]`);
+  if(itemEl){
+    const btn=itemEl.querySelector('.cl-check');
+    const txt=itemEl.querySelector('.cl-text');
+    if(btn){btn.classList.toggle('done',isDone);btn.textContent=isDone?'✓':'';}
+    if(txt)txt.classList.toggle('done',isDone);
+    let lbl=itemEl.querySelector('.cl-done-by');
+    if(isDone){if(!lbl){lbl=document.createElement('span');lbl.className='cl-done-by';itemEl.appendChild(lbl);}lbl.textContent='· '+myName;}
+    else if(lbl)lbl.remove();
+    item.done=isDone;item.doneBy=isDone?myName:null;item.doneAt=isDone?Date.now():null;
+  }
+}
+
 // ── INLINE EDIT ───────────────────────────────────────
 function startInlineEdit(entryDiv,entryId,e){
   const textEl=entryDiv.querySelector('.entry-text');if(!textEl)return;
@@ -2052,6 +2213,23 @@ function startInlineEdit(entryDiv,entryId,e){
 let pendingAttachment=null;
 function cancelAttach(){pendingAttachment=null;document.getElementById('attachPreview').classList.remove('show');}
 function sendNote(){
+  if(isChecklist){
+    const items={};
+    document.querySelectorAll('#checklistItemsList .cl-item-input').forEach(inp=>{
+      const t=inp.value.trim();
+      if(t)items[Math.random().toString(36).slice(2,9)]={text:t,done:false,doneBy:null,doneAt:null};
+    });
+    if(!Object.keys(items).length){document.querySelector('#checklistItemsList .cl-item-input')?.focus();return;}
+    const title=noteInput.value.trim()||null;
+    const entry={type:'checklist',items,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now(),isAction:true};
+    if(title)entry.title=title;
+    if(checklistAssignedUsers.length)entry.assignedTo=checklistAssignedUsers;
+    cancelChecklist();noteInput.value='';noteInput.style.height='auto';
+    if(currentView==='dm'&&currentDmWith)pushDm(entry);
+    else if(currentView==='group'&&currentGroupId)pushGroup(entry);
+    else pushEntry(entry).catch(()=>{});
+    return;
+  }
   const text=noteInput.value.trim();if(!text&&!pendingAttachment)return;
   let entry;
   if(pendingAttachment){
