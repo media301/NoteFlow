@@ -629,6 +629,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   .entry-actions{opacity:1;}
   .add-reaction-btn{opacity:1;}
   .who-task-btn{opacity:1;}
+  .who-task-btn[title^="Remove"]{display:none;}
   .dm-hint{opacity:1;}
   .task-side-btn{opacity:1;}
   .pane-actions{display:none;}
@@ -1414,7 +1415,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v5.7';
+  const _ver='v5.8';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3100,7 +3101,7 @@ async function openNewWorksheet(){
   _wsCurrentDocId=null;
   document.getElementById('worksheetTitle').value='';
   document.getElementById('worksheetOverlay').classList.add('show');
-  requestAnimationFrame(()=>_initSpreadsheet([],[]));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>_initSpreadsheet([],[])));
 }
 async function openWorksheetDoc(docId){
   const d=allDocs[docId]||{};
@@ -3116,7 +3117,11 @@ async function openWorksheetDoc(docId){
     const stored=snap.val();
     if(stored){storedData=stored.data||[[]];storedCols=stored.columns||[];}
   }
-  requestAnimationFrame(()=>_initSpreadsheet(storedData,storedCols));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    _initSpreadsheet(storedData,storedCols);
+    const el=document.getElementById('worksheetContainer');
+    el.style.opacity='0.99';setTimeout(()=>{el.style.opacity='';},50);
+  }));
 }
 function closeWorksheet(){
   document.getElementById('worksheetOverlay').classList.remove('show');
