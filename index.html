@@ -62,6 +62,16 @@ function _loadSpreadsheetLibs(){
     };document.head.appendChild(s1);
   });
 }
+function _loadMammoth(){
+  return new Promise((res,rej)=>{
+    if(window.mammoth){res();return;}
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js';
+    s.onerror=()=>{toast('Word converter failed to load — check your connection',false);rej(new Error('mammoth failed'));};
+    s.onload=res;
+    document.head.appendChild(s);
+  });
+}
 </script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
