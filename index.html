@@ -307,7 +307,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 #worksheetTitle:focus{outline:none;border-color:var(--ac);}
 .ws-save{background:var(--ac);color:#000;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;}
 .ws-save:hover{background:var(--ac2);}
-#worksheetContainer{flex:1;overflow:auto;}
+#worksheetContainer{flex:1;overflow:auto;min-height:0;height:0;}
 .entry-worksheet{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;}
 .entry-worksheet .ws-icon{font-size:22px;}
 .entry-worksheet .ws-info{flex:1}
@@ -1376,7 +1376,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v5.0';
+  const _ver='v5.1';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3041,6 +3041,10 @@ function _parseCSV(text){
 function _initSpreadsheet(data,columns){
   const el=document.getElementById('worksheetContainer');
   el.innerHTML='';_wsInst=null;
+  // Force explicit pixel height so jSpreadsheet can measure the container
+  const hdr=document.querySelector('.ws-header');
+  const availH=window.innerHeight-(hdr?hdr.offsetHeight:50);
+  el.style.height=Math.max(availH,300)+'px';
   const MINR=30,MINC=10;
   const rows=Math.max((data||[]).length,MINR);
   const cols=Math.max((data[0]||[]).length,MINC);
@@ -3053,6 +3057,7 @@ function _initSpreadsheet(data,columns){
   }catch(e){toast('Spreadsheet failed to load: '+e.message,false);console.error('jspreadsheet init error:',e);}
 }
 async function openNewWorksheet(){
+  toast('Loading spreadsheet…',true);
   await _loadSpreadsheetLibs();
   _wsCurrentDocId=null;
   document.getElementById('worksheetTitle').value='';
