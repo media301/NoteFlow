@@ -45,11 +45,11 @@ function _loadSpreadsheetLibs(){
     const base='https://cdn.jsdelivr.net/npm/';
     const lc1=document.getElementById('jsuitesCss');
     const lc2=document.getElementById('jspreadsheetCss');
-    lc1.href=base+'jsuites/dist/jsuites.min.css';lc1.removeAttribute('disabled');
-    lc2.href=base+'jspreadsheet-ce/dist/jspreadsheet.min.css';lc2.removeAttribute('disabled');
-    const s1=document.createElement('script');s1.src=base+'jsuites/dist/jsuites.min.js';
+    lc1.href=base+'jsuites@3/dist/jsuites.min.css';lc1.removeAttribute('disabled');
+    lc2.href=base+'jspreadsheet-ce@3/dist/jspreadsheet.min.css';lc2.removeAttribute('disabled');
+    const s1=document.createElement('script');s1.src=base+'jsuites@3/dist/jsuites.min.js';
     s1.onload=()=>{
-      const s2=document.createElement('script');s2.src=base+'jspreadsheet-ce/dist/index.min.js';
+      const s2=document.createElement('script');s2.src=base+'jspreadsheet-ce@3/dist/jspreadsheet.min.js';
       s2.onload=()=>{
         if(window.XLSX){res();return;}
         const s3=document.createElement('script');s3.src='https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
@@ -1372,7 +1372,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.8';
+  const _ver='v4.9';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
