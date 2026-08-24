@@ -626,7 +626,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Sign Out
       </button>
-      <div id="appVerDesk" style="font-size:10px;color:var(--dim);text-align:center;margin-top:5px;opacity:.6"></div>
+      <div id="appVerDesk" style="font-size:11px;color:var(--dim2);text-align:center;margin-top:5px"></div>
     </div>
   </aside>
 
@@ -708,6 +708,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       <div class="action-toggle-bar" id="actionBar">
         <span style="font-size:14px">✅</span>
         <span class="action-toggle-label">Task</span>
+        <select id="taskDestSelect" style="display:none;font-size:11px;font-weight:600;background:var(--card);border:1px solid var(--brd2);border-radius:6px;color:var(--text);padding:2px 4px;cursor:pointer;max-width:110px;flex-shrink:0;font-family:inherit;" title="Post task to…"></select>
         <div id="assignPicker" style="display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;padding:0 4px;"></div>
         <button class="action-x" onclick="cancelActionTag()">×</button>
       </div>
@@ -1009,7 +1010,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
 </div>
 <div class="mobile-panel" id="mobileTeamPanel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-    <div><span style="font-size:15px;font-weight:700">Team</span><div id="appVerMob" style="font-size:9px;color:var(--dim);opacity:.6;margin-top:1px"></div></div>
+    <div><span style="font-size:15px;font-weight:700">Team</span><div id="appVerMob" style="font-size:11px;color:var(--dim2);margin-top:1px"></div></div>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="icon-btn" onclick="openGuide()" title="User guide" style="font-size:15px;font-weight:700;color:var(--dim2)">?</button>
       <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
@@ -1158,7 +1159,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v2.4';
+  const _ver='v2.6';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1559,8 +1560,8 @@ function switchToActionItems(){
   document.getElementById('actionItemsRow').classList.add('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
   document.getElementById('inputArea').style.display='';
-  document.getElementById('noteInput').placeholder='New task… (posts to #General)';
   if(!isActionTag)toggleActionTag();
+  _populateTaskDestSelect();
   actionFilterUserId=null;
   clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading tasks…';
   forceIosRepaint();renderTopicList();closeSheet();
@@ -2079,10 +2080,15 @@ function showActionPopover(entryDiv,entryId,e){
     if(!window._fb)return;
     const{db,ref,set}=window._fb;
     const basePath=entryDiv.dataset.basePath||currentBasePath();
-    set(ref(db,basePath+'/entries/'+entryId),{...e,isAction:true,assignedTo:selected.length?selected:null});
+    const updatedE={...e,isAction:true,assignedTo:selected.length?selected:null};
+    set(ref(db,basePath+'/entries/'+entryId),updatedE);
     pop.remove();
+    const newEl=buildEntry(entryId,updatedE,currentView==='dm');
+    if(entryDiv.dataset.basePath)newEl.dataset.basePath=entryDiv.dataset.basePath;
+    entryDiv.replaceWith(newEl);
   });
-  setTimeout(()=>document.addEventListener('click',()=>pop.remove(),{once:true}),0);
+  pop.addEventListener('click',ev=>ev.stopPropagation());
+  setTimeout(()=>document.addEventListener('click',ev=>{if(!pop.contains(ev.target))pop.remove();}),0);
 }
 function showAssignMorePopover(entryDiv,entryId,e){
   document.querySelectorAll('.action-popover').forEach(p=>p.remove());
@@ -2107,10 +2113,17 @@ function showAssignMorePopover(entryDiv,entryId,e){
     if(!window._fb)return;
     const{db,ref,set}=window._fb;
     const basePath=entryDiv.dataset.basePath||currentBasePath();
-    set(ref(db,basePath+'/entries/'+entryId),{...e,assignedTo:selected.length?selected:null});
+    const updatedE={...e,assignedTo:selected.length?selected:null};
+    set(ref(db,basePath+'/entries/'+entryId),updatedE);
     pop.remove();
+    // Optimistic update
+    const newEl=buildEntry(entryId,updatedE,currentView==='dm');
+    if(entryDiv.dataset.basePath)newEl.dataset.basePath=entryDiv.dataset.basePath;
+    entryDiv.replaceWith(newEl);
+    toast('Assignees updated',true);
   });
-  setTimeout(()=>document.addEventListener('click',()=>pop.remove(),{once:true}),0);
+  pop.addEventListener('click',ev=>ev.stopPropagation());
+  setTimeout(()=>document.addEventListener('click',ev=>{if(!pop.contains(ev.target))pop.remove();}),0);
 }
 
 // ── REPLY ─────────────────────────────────────────────
@@ -2143,11 +2156,36 @@ function populateAssignPicker(){
     picker.appendChild(chip);
   });
 }
+function _populateTaskDestSelect(){
+  const sel=document.getElementById('taskDestSelect');
+  if(!sel)return;
+  sel.innerHTML='';
+  const topics=Object.entries(allTopics).sort((a,b)=>{if(a[0]==='general')return -1;if(b[0]==='general')return 1;return 0;});
+  const groups=Object.entries(allGroups||{});
+  topics.forEach(([id,t])=>{
+    const opt=document.createElement('option');opt.value='topic:'+id;opt.textContent='#'+(t.title||id);
+    if(id===currentTopicId)opt.selected=true;
+    sel.appendChild(opt);
+  });
+  groups.forEach(([id,g])=>{
+    const opt=document.createElement('option');opt.value='group:'+id;opt.textContent='👥 '+(g.name||id);
+    if(id===currentGroupId)opt.selected=true;
+    sel.appendChild(opt);
+  });
+  sel.style.display=sel.options.length?'':'none';
+  const placeholderText=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].textContent:'task';
+  document.getElementById('noteInput').placeholder='New task → '+placeholderText+'…';
+  sel.onchange=()=>{
+    const txt=sel.options[sel.selectedIndex]?.textContent||'task';
+    document.getElementById('noteInput').placeholder='New task → '+txt+'…';
+  };
+}
 function toggleActionTag(){
   isActionTag=!isActionTag;
   document.getElementById('actionBtn').classList.toggle('action-on',isActionTag);
   document.getElementById('actionBar').classList.toggle('show',isActionTag);
-  if(isActionTag)populateAssignPicker();
+  if(isActionTag){populateAssignPicker();if(currentView==='actions')document.getElementById('taskDestSelect').style.display='';}
+  else{document.getElementById('taskDestSelect').style.display='none';}
 }
 function cancelActionTag(){isActionTag=false;assignedUsers=[];document.getElementById('actionBtn').classList.remove('action-on');document.getElementById('actionBar').classList.remove('show');}
 
@@ -2282,8 +2320,11 @@ function sendNote(){
   if(currentView==='dm'&&currentDmWith){pushDm(entry);}
   else if(currentView==='group'&&currentGroupId){pushGroup(entry);}
   else if(currentView==='actions'){
-    const targetId=allTopics['general']?'general':(Object.keys(allTopics)[0]||'general');
-    if(window._fb){const{db,ref,push}=window._fb;push(ref(db,'topics/'+targetId+'/entries'),entry).then(()=>switchToActionItems()).catch(()=>{});}
+    const sel=document.getElementById('taskDestSelect');
+    const val=sel&&sel.value?sel.value:'topic:'+(currentTopicId||'general');
+    const[destType,destId]=val.split(':');
+    const fbPath=(destType==='group'?'groups/':'topics/')+destId+'/entries';
+    if(window._fb){const{db,ref,push}=window._fb;push(ref(db,fbPath),entry).then(()=>switchToActionItems()).catch(()=>{});}
   }
   else{
     pushEntry(entry).then(ref=>{if(ref&&text)sendMentionNotifications(text,ref.key,currentTopicId);}).catch(()=>{});
