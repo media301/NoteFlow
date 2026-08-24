@@ -1212,7 +1212,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v3.0';
+  const _ver='v3.2';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -2733,7 +2733,13 @@ function startRec(){
     let interim='',final='';
     for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript;else interim=e.results[i][0].transcript;}
     document.getElementById('interim').textContent=interim?'"'+interim+'"':'';
-    if(final){pushEntry({type:'text',text:final.trim(),name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()});}
+    if(final){
+      const inp=document.getElementById('noteInput');
+      const cur=inp.value;
+      inp.value=(cur&&!cur.endsWith(' ')?cur+' ':cur)+final.trim();
+      inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';
+      inp.focus();
+    }
   };
   recog.onerror=e=>{if(e.error!=='no-speech')toast('Mic error: '+e.error,false);};
   recog.onend=()=>{if(recording){try{recog.start();}catch(_){}}};
@@ -2852,7 +2858,8 @@ function showMobileTab(tab){
     } else if(currentView==='doc'&&currentDocId){
       // stay in current doc view — editor already live
     } else if(currentView==='files'||currentView==='actions'){
-      // stay in files/actions view — already set up by switchToFiles/switchToActionItems
+      switchTopic(currentTopicId||'general');
+      forceIosRepaint();
     } else {
       switchTopic(currentTopicId);
       forceIosRepaint();
