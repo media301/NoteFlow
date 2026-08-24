@@ -913,8 +913,8 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <div class="doc-hl-swatch" onmousedown="event.preventDefault()" onclick="docHighlight('#ADD8E6')" style="background:#ADD8E6" title="Highlight blue">A</div>
         <div class="doc-hl-swatch" onmousedown="event.preventDefault()" onclick="docHighlight('transparent')" style="background:var(--card2);border-style:dashed" title="Remove highlight">✕</div>
         <div class="doc-fmt-sep"></div>
-        <select class="doc-font-sel" onmousedown="event.preventDefault()" onchange="docSetFont(this.value)" title="Font">
-          <option value="">System</option>
+        <select class="doc-font-sel" onmousedown="event.preventDefault()" onchange="docSetFont(this.value)" title="Select text, then pick a font">
+          <option value="">Font</option>
           <option value="Georgia,'Times New Roman',serif">Serif</option>
           <option value="'Courier New',Courier,monospace">Mono</option>
           <option value="'Arial',Helvetica,sans-serif">Arial</option>
@@ -1372,7 +1372,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.5';
+  const _ver='v4.7';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3049,22 +3049,24 @@ async function openNewWorksheet(){
   await _loadSpreadsheetLibs();
   _wsCurrentDocId=null;
   document.getElementById('worksheetTitle').value='';
-  _initSpreadsheet([],[]);
   document.getElementById('worksheetOverlay').classList.add('show');
+  requestAnimationFrame(()=>_initSpreadsheet([],[]));
 }
 async function openWorksheetDoc(docId){
   const d=allDocs[docId]||{};
   await _loadSpreadsheetLibs();
   _wsCurrentDocId=docId;
   document.getElementById('worksheetTitle').value=d.name||'';
+  document.getElementById('worksheetOverlay').classList.add('show');
   toast('Loading spreadsheet…',true);
+  let storedData=[[]],storedCols=[];
   if(window._fb){
     const{db,ref,get}=window._fb;
     const snap=await get(ref(db,'docs/'+docId+'/data'));
     const stored=snap.val();
-    _initSpreadsheet(stored?.data||[[]],stored?.columns||[]);
-  }else{_initSpreadsheet([[]],[]);}
-  document.getElementById('worksheetOverlay').classList.add('show');
+    if(stored){storedData=stored.data||[[]];storedCols=stored.columns||[];}
+  }
+  requestAnimationFrame(()=>_initSpreadsheet(storedData,storedCols));
 }
 function closeWorksheet(){
   document.getElementById('worksheetOverlay').classList.remove('show');
@@ -3108,8 +3110,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       }catch(_){toast('Could not read file',false);return;}
       _wsCurrentDocId=null;
       document.getElementById('worksheetTitle').value=f.name.replace(/\.[^.]+$/,'');
-      _initSpreadsheet(parsed,[]);
       document.getElementById('worksheetOverlay').classList.add('show');
+      requestAnimationFrame(()=>_initSpreadsheet(parsed,[]));
     };
     if(ext==='csv')reader.readAsText(f);else reader.readAsBinaryString(f);
   });
