@@ -281,7 +281,8 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .reaction-pill.mine .count{color:var(--ac);}
 .add-reaction-btn{padding:3px 8px;border-radius:12px;border:1px solid var(--brd2);
                   background:none;color:var(--dim);cursor:pointer;font-size:14px;
-                  transition:all .12s;}
+                  transition:all .12s;opacity:0;}
+.entry-bubble:hover .add-reaction-btn{opacity:1;}
 .add-reaction-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--acbg);}
 .emoji-picker{position:absolute;background:var(--card2);border:1px solid var(--brd2);
               border-radius:10px;padding:7px;display:flex;gap:5px;z-index:100;
@@ -479,6 +480,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   .tool-btn{padding:6px 9px;font-size:12px;}
   .text-row{padding:6px .75rem 10px;}
   .entry-actions{opacity:1;}
+  .add-reaction-btn{opacity:1;}
   .who-task-btn{opacity:1;}
   .dm-hint{opacity:1;}
   .pane-actions{display:none;}
@@ -588,7 +590,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <div class="sidebar-label">Views</div>
         <div class="nav-row" id="actionItemsRow" onclick="switchToActionItems()">
           <span class="row-icon">✅</span>
-          <span class="row-label">Action Items</span>
+          <span class="row-label">Tasks</span>
           <span class="row-count" id="actionCount"></span>
         </div>
         <div class="nav-row" id="filesRow" onclick="switchToFiles()">
@@ -705,7 +707,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       </div>
       <div class="action-toggle-bar" id="actionBar">
         <span style="font-size:14px">✅</span>
-        <span class="action-toggle-label">Action Item</span>
+        <span class="action-toggle-label">Task</span>
         <div id="assignPicker" style="display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;padding:0 4px;"></div>
         <button class="action-x" onclick="cancelActionTag()">×</button>
       </div>
@@ -728,7 +730,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           Attach File
         </label>
-        <button class="tool-btn" id="actionBtn" onclick="toggleActionTag()">✅ Action Item</button>
+        <button class="tool-btn" id="actionBtn" onclick="toggleActionTag()">✅ Task</button>
         <button class="tool-btn" id="checklistBtn" onclick="toggleChecklist()">📋 Checklist</button>
         <div style="width:1px;height:16px;background:var(--brd2);flex-shrink:0;margin:0 2px"></div>
         <button class="tool-btn fmt-btn" onmousedown="event.preventDefault()" onclick="fmtWrap('**','**')" title="Bold"><strong>B</strong></button>
@@ -937,7 +939,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <div class="sheet-sec-title">Views</div>
     <div class="nav-row" onclick="closeSheet();setTimeout(switchToActionItems,350)">
       <span class="row-icon">✅</span>
-      <span class="row-label">Action Items</span>
+      <span class="row-label">Tasks</span>
       <span class="row-count" id="sheetActionCount"></span>
     </div>
     <div class="nav-row" onclick="closeSheet();setTimeout(switchToFiles,350)">
@@ -977,7 +979,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   </div>
   <div class="tab-item" id="tab-actions" onclick="showMobileTab('actions')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-    Actions
+    Tasks
   </div>
 </div>
 
@@ -998,7 +1000,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   <div class="mobile-panel-sec">
     <div class="mobile-panel-label">Views</div>
     <div class="nav-row" onclick="switchToActionItems();showMobileTab('notes')">
-      <span class="row-icon">✅</span><span class="row-label">Action Items</span>
+      <span class="row-icon">✅</span><span class="row-label">Tasks</span>
     </div>
     <div class="nav-row" onclick="switchToFiles();showMobileTab('notes')">
       <span class="row-icon">📎</span><span class="row-label">Files</span>
@@ -1156,7 +1158,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v2.3';
+  const _ver='v2.4';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1552,13 +1554,15 @@ function renderDmList(data){
 function switchToActionItems(){
   leaveDocMode();
   currentView='actions';currentDmWith=null;currentGroupId=null;
-  document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--amber)">✅</span><span class="pane-label">Action Items</span>`;
-  document.getElementById('actionToolbar').style.display='none';
+  document.getElementById('paneTitle').innerHTML=`<span class="pane-hash" style="color:var(--amber)">✅</span><span class="pane-label">Tasks</span>`;
+  document.getElementById('actionToolbar').style.display='';
   document.getElementById('actionItemsRow').classList.add('action-active');
   document.getElementById('filesRow')?.classList.remove('action-active');
-  document.getElementById('inputArea').style.display='none';
+  document.getElementById('inputArea').style.display='';
+  document.getElementById('noteInput').placeholder='New task… (posts to #General)';
+  if(!isActionTag)toggleActionTag();
   actionFilterUserId=null;
-  clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading action items…';
+  clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading tasks…';
   forceIosRepaint();renderTopicList();closeSheet();
   if(!window._fb){renderActionItems({});return;}
   const{db,ref,get}=window._fb;
@@ -1627,7 +1631,7 @@ function renderActionItems(topicEntries,groupEntries){
   }
   // Apply filter
   const filtered=actionFilterUserId?items.filter(({e})=>getAssignees(e).some(u=>u.id===actionFilterUserId)):items;
-  if(!items.length){empty.classList.remove('fading');empty.style.display='flex';emptyMsg.textContent='No action items yet. Tag a note with ✅ Action Item to track it here.';return;}
+  if(!items.length){empty.classList.remove('fading');empty.style.display='flex';emptyMsg.textContent='No tasks yet. Use ✅ Task to assign one.';return;}
   hideFeedEmpty(empty);
   const incomplete=filtered.filter(({e})=>!e.completed);
   const done=filtered.filter(({e})=>e.completed);
@@ -1650,8 +1654,8 @@ function renderActionItems(topicEntries,groupEntries){
     });
   };
   addSection('Assigned to Me','#F0605A',assignedToMe);
-  addSection('My Action Items','var(--amber)',mine);
-  addSection('Team Action Items','var(--dim)',others);
+  addSection('My Tasks','var(--amber)',mine);
+  addSection('Team Tasks','var(--dim)',others);
   addSection('Completed','var(--ac)',done);
   const fw=document.getElementById('feed');if(fw)fw.scrollTop=0;
   forceIosRepaint();
@@ -1944,12 +1948,13 @@ function buildEntry(id,e,isDm){
         ${e.isAction?`<button class="complete-btn${e.completed?' done':''}" title="${e.completed?'Mark incomplete':'Mark complete'}">${e.completed?'✓':''}</button>`:''}
         <span class="entry-name" style="color:${e.color||'#888'}">${esc(name)}</span>
         <span class="entry-time">${time}${e.edited?' · edited':''}</span>
-        ${e.isAction&&!e.completed?'<span class="action-badge">✅ Action</span>':''}
+        ${e.isAction&&!e.completed?'<span class="action-badge">✅ Task</span>':''}
         ${(()=>{const a=e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];return a.map(u=>`<span style="font-size:10px;background:var(--redbg);color:var(--red);border-radius:4px;padding:1px 6px;font-weight:700">→ ${esc(u.name)}</span>`).join('');})()}
         ${e.pinned?'<span class="pin-badge">📌</span>':''}
         <div class="entry-actions">
           ${!isDm?`<button class="entry-act-btn reply-btn">↩ Reply</button>`:''}
-          ${!e.isAction?`<button class="entry-act-btn action-make-btn">✅ Action</button>`:''}
+          ${!e.isAction?`<button class="entry-act-btn action-make-btn">✅ Task</button>`:''}
+          ${e.isAction?`<button class="entry-act-btn assign-more-btn">👤 Assign</button>`:''}
           ${isMe&&(e.type==='text'||e.isAction)?`
             <button class="entry-act-btn edit-btn">✏ Edit</button>
             <button class="entry-act-btn${e.pinned?' pin-active':''} pin-btn">${e.pinned?'📌 Unpin':'📌 Pin'}</button>`:''}
@@ -1967,6 +1972,7 @@ function buildEntry(id,e,isDm){
   const db2=div.querySelector('.del-btn');if(db2)db2.addEventListener('click',()=>deleteEntry(id));
   const cb=div.querySelector('.complete-btn');if(cb)cb.addEventListener('click',()=>toggleComplete(div,id,e));
   const amb=div.querySelector('.action-make-btn');if(amb)amb.addEventListener('click',ev=>{ev.stopPropagation();showActionPopover(div,id,e);});
+  const asb=div.querySelector('.assign-more-btn');if(asb)asb.addEventListener('click',ev=>{ev.stopPropagation();showAssignMorePopover(div,id,e);});
   div.querySelectorAll('.cl-item').forEach(itemEl=>{
     const key=itemEl.dataset.key;const item=(e.items||{})[key];
     if(item){const btn=itemEl.querySelector('.cl-check');if(btn)btn.addEventListener('click',()=>toggleChecklistItem(div,id,key,item));}
@@ -2074,6 +2080,34 @@ function showActionPopover(entryDiv,entryId,e){
     const{db,ref,set}=window._fb;
     const basePath=entryDiv.dataset.basePath||currentBasePath();
     set(ref(db,basePath+'/entries/'+entryId),{...e,isAction:true,assignedTo:selected.length?selected:null});
+    pop.remove();
+  });
+  setTimeout(()=>document.addEventListener('click',()=>pop.remove(),{once:true}),0);
+}
+function showAssignMorePopover(entryDiv,entryId,e){
+  document.querySelectorAll('.action-popover').forEach(p=>p.remove());
+  const pop=document.createElement('div');pop.className='action-popover';
+  const existing=(e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[]).map(u=>u.id);
+  const profiles=Object.entries(allProfiles).filter(([id])=>id!==myId);
+  let selected=e.assignedTo?(Array.isArray(e.assignedTo)?[...e.assignedTo]:[e.assignedTo]):[];
+  const chipsHtml=profiles.map(([id,p])=>`<div class="assign-chip${existing.includes(id)?' selected':''}" data-id="${esc(id)}" data-name="${esc(p.name)}" data-initials="${esc(p.initials)}" data-color="${esc(p.color)}"><div class="ac-dot" style="background:${p.color}">${esc(p.initials)}</div><span>${esc(p.name.split(' ')[0])}</span></div>`).join('');
+  pop.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--ac);margin-bottom:8px">👤 Update Assignees</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${chipsHtml||'<span style="font-size:11px;color:var(--dim)">No teammates yet</span>'}</div><button class="ap-save" style="background:var(--ac);color:#000;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%">Update</button>`;
+  document.body.appendChild(pop);
+  const rect=entryDiv.getBoundingClientRect();
+  pop.style.top=Math.min(rect.bottom+4,window.innerHeight-pop.offsetHeight-8)+'px';
+  pop.style.left=Math.min(rect.left,window.innerWidth-238)+'px';
+  pop.querySelectorAll('.assign-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      const idx=selected.findIndex(u=>u.id===chip.dataset.id);
+      if(idx>=0){selected.splice(idx,1);chip.classList.remove('selected');}
+      else{selected.push({id:chip.dataset.id,name:chip.dataset.name,initials:chip.dataset.initials,color:chip.dataset.color});chip.classList.add('selected');}
+    });
+  });
+  pop.querySelector('.ap-save').addEventListener('click',()=>{
+    if(!window._fb)return;
+    const{db,ref,set}=window._fb;
+    const basePath=entryDiv.dataset.basePath||currentBasePath();
+    set(ref(db,basePath+'/entries/'+entryId),{...e,assignedTo:selected.length?selected:null});
     pop.remove();
   });
   setTimeout(()=>document.addEventListener('click',()=>pop.remove(),{once:true}),0);
@@ -2247,10 +2281,15 @@ function sendNote(){
   }
   if(currentView==='dm'&&currentDmWith){pushDm(entry);}
   else if(currentView==='group'&&currentGroupId){pushGroup(entry);}
+  else if(currentView==='actions'){
+    const targetId=allTopics['general']?'general':(Object.keys(allTopics)[0]||'general');
+    if(window._fb){const{db,ref,push}=window._fb;push(ref(db,'topics/'+targetId+'/entries'),entry).then(()=>switchToActionItems()).catch(()=>{});}
+  }
   else{
     pushEntry(entry).then(ref=>{if(ref&&text)sendMentionNotifications(text,ref.key,currentTopicId);}).catch(()=>{});
   }
   noteInput.value='';noteInput.style.height='auto';hideMentionPicker();
+  if(currentView==='actions'){if(!isActionTag)toggleActionTag();}
   if(window._fb&&currentView==='topic'){const{db,ref,remove}=window._fb;remove(ref(db,'typing/'+currentTopicId+'/'+myId));}
 }
 function pushEntry(entry){if(!window._fb)return Promise.resolve(null);const{db,ref,push}=window._fb;return push(ref(db,'topics/'+currentTopicId+'/entries'),entry);}
