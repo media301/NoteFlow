@@ -322,16 +322,14 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 #worksheetTitle:focus{outline:none;border-color:var(--ac);}
 .ws-save{background:var(--ac);color:#000;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;}
 .ws-save:hover{background:var(--ac2);}
-#worksheetContainer{flex:1;overflow:auto;min-height:0;height:0;}
-/* jSpreadsheet dark mode overrides */
-@media(prefers-color-scheme:dark){
-  #worksheetContainer td,#worksheetContainer th,#worksheetContainer .jss_content,#worksheetContainer input{color:var(--text)!important;background:var(--surf)!important;}
-  #worksheetContainer thead td,#worksheetContainer thead th{background:var(--card2)!important;color:var(--dim2)!important;}
-  #worksheetContainer .jss_border{border-color:var(--brd)!important;}
-}
-[data-theme="dark"] #worksheetContainer td,[data-theme="dark"] #worksheetContainer th,[data-theme="dark"] #worksheetContainer .jss_content,[data-theme="dark"] #worksheetContainer input{color:var(--text)!important;background:var(--surf)!important;}
-[data-theme="dark"] #worksheetContainer thead td,[data-theme="dark"] #worksheetContainer thead th{background:var(--card2)!important;color:var(--dim2)!important;}
-[data-theme="dark"] #worksheetContainer .jss_border{border-color:var(--brd)!important;}
+.formula-bar{display:flex;align-items:center;background:var(--surf);border-bottom:1px solid var(--brd);flex-shrink:0;height:34px;}
+.formula-ref{font-size:12px;font-family:monospace;font-weight:700;color:var(--text);min-width:52px;text-align:center;border-right:1px solid var(--brd);height:100%;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 6px;}
+.formula-sep{font-size:11px;color:var(--dim);font-style:italic;font-weight:600;width:28px;text-align:center;border-right:1px solid var(--brd);height:100%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.formula-input{flex:1;border:none;outline:none;background:transparent;font-size:13px;color:var(--text);padding:0 8px;font-family:monospace;height:100%;}
+.ws-row-btns{display:flex;align-items:center;gap:4px;padding:0 8px;border-left:1px solid var(--brd);height:100%;flex-shrink:0;}
+.ws-row-btn{background:var(--card2);border:1px solid var(--brd2);border-radius:5px;color:var(--dim2);font-size:11px;font-weight:600;padding:2px 7px;cursor:pointer;white-space:nowrap;font-family:inherit;}
+.ws-row-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--acbg);}
+#worksheetContainer{flex:1;overflow:auto;min-height:0;height:0;color-scheme:light;}
 .entry-worksheet{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;}
 .entry-worksheet .ws-icon{font-size:22px;}
 .entry-worksheet .ws-info{flex:1}
@@ -967,6 +965,17 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <input id="worksheetTitle" type="text" placeholder="Sheet name…">
     <button class="ws-save" onclick="saveWorksheet()">Save</button>
   </div>
+  <div class="formula-bar">
+    <span class="formula-ref" id="formulaRef">A1</span>
+    <span class="formula-sep">fx</span>
+    <input class="formula-input" id="formulaInput" type="text" spellcheck="false" autocomplete="off" placeholder="value or =formula">
+    <div class="ws-row-btns">
+      <button class="ws-row-btn" onclick="wsInsertRow()" title="Insert row below">+Row</button>
+      <button class="ws-row-btn" onclick="wsDeleteRow()" title="Delete selected row">−Row</button>
+      <button class="ws-row-btn" onclick="wsInsertCol()" title="Insert column right">+Col</button>
+      <button class="ws-row-btn" onclick="wsDeleteCol()" title="Delete selected column">−Col</button>
+    </div>
+  </div>
   <div id="worksheetContainer"></div>
 </div>
 
@@ -1424,7 +1433,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v5.9';
+  const _ver='v5.11';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3082,7 +3091,37 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
 function fileIcon(n){const e=n.split('.').pop().toLowerCase();return{pdf:'📕',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📊',ppt:'📊',pptx:'📊',mp3:'🎵',wav:'🎵',mp4:'🎬',mov:'🎬',zip:'📦'}[e]||'📄';}
 
 // ── WORKSHEET ─────────────────────────────────────────
-let _wsCurrentDocId=null,_wsInst=null;
+let _wsCurrentDocId=null,_wsInst=null,_wsSelCell=[0,0];
+function _updateFormulaBar(col,row){
+  _wsSelCell=[col,row];
+  const refEl=document.getElementById('formulaRef');
+  const inp=document.getElementById('formulaInput');
+  if(!refEl||!inp)return;
+  const c=parseInt(col),r=parseInt(row);
+  refEl.textContent=String.fromCharCode(65+c)+(r+1);
+  if(!_wsInst)return;
+  try{
+    const d=_wsInst.getData();
+    inp.value=(d[r]&&d[r][c]!==undefined&&d[r][c]!==null)?d[r][c]:'';
+  }catch(e){inp.value='';}
+}
+function _wireFormulaBar(){
+  const inp=document.getElementById('formulaInput');
+  if(!inp||inp._wired)return;
+  inp._wired=true;
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      if(_wsInst){try{_wsInst.setValueFromCoords(_wsSelCell[0],_wsSelCell[1],inp.value,true);}catch(ex){}}
+      inp.blur();
+    }
+    if(e.key==='Escape'){_updateFormulaBar(_wsSelCell[0],_wsSelCell[1]);inp.blur();}
+  });
+}
+function wsInsertRow(){if(!_wsInst)return;try{_wsInst.insertRow(1,_wsSelCell[1],false);}catch(e){}}
+function wsDeleteRow(){if(!_wsInst)return;try{_wsInst.deleteRow(_wsSelCell[1],1);}catch(e){}}
+function wsInsertCol(){if(!_wsInst)return;try{_wsInst.insertColumn(1,_wsSelCell[0],false);}catch(e){}}
+function wsDeleteCol(){if(!_wsInst)return;try{_wsInst.deleteColumn(_wsSelCell[0],1);}catch(e){}}
 function _parseCSV(text){
   return text.trim().split('\n').map(row=>{const cells=[];let cur='',inQ=false;for(const c of row){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cells.push(cur);cur='';}else cur+=c;}cells.push(cur);return cells;});
 }
@@ -3100,8 +3139,13 @@ function _initSpreadsheet(data,columns){
   for(let r=0;r<rows;r++){const row=[];for(let c=0;c<cols;c++)row.push(data[r]?.[c]??'');padded.push(row);}
   const colDefs=columns&&columns.length?columns.map(c=>({...c,type:undefined})):Array.from({length:cols},(_,i)=>({title:String.fromCharCode(65+i),width:100}));
   try{
-    const sheets=jspreadsheet(el,{worksheets:[{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,copyCompatibility:true,fillHandle:true,pagination:false}]});
+    const sheets=jspreadsheet(el,{
+      onselection:function(inst,x1,y1){_updateFormulaBar(x1,y1);},
+      worksheets:[{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,copyCompatibility:true,fillHandle:true,pagination:false}]
+    });
     _wsInst=sheets[0];
+    _wireFormulaBar();
+    _updateFormulaBar(0,0);
   }catch(e){toast('Spreadsheet failed to load: '+e.message,false);console.error('jspreadsheet init error:',e);}
 }
 async function openNewWorksheet(){
