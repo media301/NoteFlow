@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, push, remove, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set, push, remove, get, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
   const app = initializeApp({
     apiKey: "AIzaSyBwOkY8YtNo6v0Luui_w38jsYTrAgEKTJA",
     authDomain: "noteflow-d929a.firebaseapp.com",
@@ -33,7 +33,31 @@
   let myId = savedName ? nameToId(savedName) : (localStorage.getItem('nf_id')||'u_'+Math.random().toString(36).slice(2,9));
   if (!myColor) { myColor = COLORS[Math.floor(Math.random()*COLORS.length)]; localStorage.setItem('nf_color',myColor); }
   localStorage.setItem('nf_id',myId);
-  window._fb = { db, ref, onValue, set, push, remove, get, myId, myColor };
+  window._fb = { db, ref, onValue, set, push, remove, get, update, myId, myColor };
+</script>
+<!-- Spreadsheet libs — loaded lazily on first use -->
+<link rel="stylesheet" id="jsuitesCss" href="" disabled>
+<link rel="stylesheet" id="jspreadsheetCss" href="" disabled>
+<script>
+function _loadSpreadsheetLibs(){
+  return new Promise(res=>{
+    if(window.jspreadsheet){res();return;}
+    const base='https://cdn.jsdelivr.net/npm/';
+    const lc1=document.getElementById('jsuitesCss');
+    const lc2=document.getElementById('jspreadsheetCss');
+    lc1.href=base+'jsuites/dist/jsuites.min.css';lc1.removeAttribute('disabled');
+    lc2.href=base+'jspreadsheet-ce/dist/jspreadsheet.min.css';lc2.removeAttribute('disabled');
+    const s1=document.createElement('script');s1.src=base+'jsuites/dist/jsuites.min.js';
+    s1.onload=()=>{
+      const s2=document.createElement('script');s2.src=base+'jspreadsheet-ce/dist/index.min.js';
+      s2.onload=()=>{
+        if(window.XLSX){res();return;}
+        const s3=document.createElement('script');s3.src='https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+        s3.onload=res;document.head.appendChild(s3);
+      };document.head.appendChild(s2);
+    };document.head.appendChild(s1);
+  });
+}
 </script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -269,6 +293,24 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .assign-chip.selected{border-color:var(--red);background:var(--redbg);color:var(--text);}
 .assign-chip .ac-dot{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font-size:7px;font-weight:700;color:#000;flex-shrink:0;}
+/* WORKSHEET OVERLAY */
+#worksheetOverlay{position:fixed;inset:0;z-index:900;background:var(--bg);display:none;flex-direction:column;}
+#worksheetOverlay.show{display:flex;}
+.ws-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;}
+.ws-back{background:none;border:none;color:var(--ac);font-size:14px;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:6px;}
+.ws-back:hover{background:var(--acbg);}
+#worksheetTitle{flex:1;background:none;border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text);font-size:14px;font-weight:600;font-family:inherit;}
+#worksheetTitle:focus{outline:none;border-color:var(--ac);}
+.ws-save{background:var(--ac);color:#000;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;}
+.ws-save:hover{background:var(--ac2);}
+#worksheetContainer{flex:1;overflow:auto;}
+.entry-worksheet{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;}
+.entry-worksheet .ws-icon{font-size:22px;}
+.entry-worksheet .ws-info{flex:1}
+.entry-worksheet .ws-name{font-weight:600;font-size:14px;}
+.entry-worksheet .ws-meta{font-size:11px;color:var(--dim);margin-top:1px;}
+.entry-worksheet .ws-open{background:var(--acbg);color:var(--ac);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+
 /* iOS-style people picker sheets */
 .ios-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-radius:12px 12px 0 0;
   padding:0;z-index:500;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,1,.23,1);
@@ -828,6 +870,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           Attach File
         </label>
+        <button class="tool-btn" onclick="openNewWorksheet()">📊 Sheet</button>
         <button class="tool-btn" id="actionBtn" onclick="toggleActionTag()">✅ Task</button>
         <button class="tool-btn" id="checklistBtn" onclick="toggleChecklist()">📋 Checklist</button>
         <div style="width:1px;height:16px;background:var(--brd2);flex-shrink:0;margin:0 2px"></div>
@@ -886,6 +929,16 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
       </div>
     </div>
   </div>
+</div>
+
+<!-- worksheet overlay -->
+<div id="worksheetOverlay">
+  <div class="ws-header">
+    <button class="ws-back" onclick="closeWorksheet()">← Back</button>
+    <input id="worksheetTitle" type="text" placeholder="Sheet name…">
+    <button class="ws-save" onclick="saveWorksheet()">Save</button>
+  </div>
+  <div id="worksheetContainer"></div>
 </div>
 
 <!-- passphrase modal -->
@@ -1319,7 +1372,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.3';
+  const _ver='v4.4';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -2253,6 +2306,7 @@ function buildEntry(id,e,isDm){
       </div>`:'';
   let content='';
   if(e.type==='image')content=`<div class="entry-img"><img src="${e.src}" alt="${esc(e.filename||'')}" onload="forceIosRepaint()"></div>${e.text?`<div class="entry-text" style="margin-top:5px">${parseMentions(e.text)}</div>`:''}`;
+  else if(e.type==='worksheet')content=`<div class="entry-worksheet"><span class="ws-icon">📊</span><div class="ws-info"><div class="ws-name">${esc(e.title||'Worksheet')}</div><div class="ws-meta">${e.data?e.data.length+' rows':'Spreadsheet'}</div></div><button class="ws-open" onclick="openWorksheetEntry('${esc(id)}',event)">Open ↗</button></div>`;
   else if(e.type==='file')content=e.src
     ?`<div class="entry-file" onclick="downloadFile('${esc(e.filename||'file')}','${esc(e.src)}')" style="cursor:pointer" title="Click to download"><span>${esc(e.icon||'📄')}</span><span style="flex:1">${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--ac);font-weight:600">↓ Download</span></div>`
     :`<div class="entry-file"><span>${esc(e.icon||'📄')}</span><span>${esc(e.filename||'')}</span><span style="font-size:11px;color:var(--dim)">no download</span></div>`;
@@ -2955,6 +3009,25 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
   const files=Array.from(e.target.files);e.target.value='';
   if(!files.length)return;
   const f=files[0];
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='csv'||ext==='xlsx'||ext==='xls'){
+    toast('Loading spreadsheet…',true);
+    await _loadSpreadsheetLibs();
+    const reader=new FileReader();
+    reader.onload=async evt=>{
+      let data;
+      try{
+        if(ext==='csv'){data=_parseCSV(evt.target.result);}
+        else{const wb=XLSX.read(evt.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});}
+      }catch(_){toast('Could not read file',false);return;}
+      _wsCurrentEntryId=null;_wsCurrentTopicId=currentTopicId;
+      document.getElementById('worksheetTitle').value=f.name.replace(/\.[^.]+$/,'');
+      _initSpreadsheet(data,[]);
+      document.getElementById('worksheetOverlay').classList.add('show');
+    };
+    if(ext==='csv')reader.readAsText(f);else reader.readAsBinaryString(f);
+    return;
+  }
   if(f.type.startsWith('image/')){
     toast('Loading image…',true);
     const src=await resizeImg(f,900);
@@ -2974,6 +3047,69 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
   }
 });
 function fileIcon(n){const e=n.split('.').pop().toLowerCase();return{pdf:'📕',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📊',ppt:'📊',pptx:'📊',mp3:'🎵',wav:'🎵',mp4:'🎬',mov:'🎬',zip:'📦'}[e]||'📄';}
+
+// ── WORKSHEET ─────────────────────────────────────────
+let _wsCurrentEntryId=null,_wsCurrentTopicId=null,_wsInst=null;
+function _parseCSV(text){
+  return text.trim().split('\n').map(row=>{const cells=[];let cur='',inQ=false;for(const c of row){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cells.push(cur);cur='';}else cur+=c;}cells.push(cur);return cells;});
+}
+function _initSpreadsheet(data,columns){
+  const el=document.getElementById('worksheetContainer');
+  el.innerHTML='';_wsInst=null;
+  const MINR=30,MINC=10;
+  const rows=Math.max((data||[]).length,MINR);
+  const cols=Math.max((data[0]||[]).length,MINC);
+  const padded=[];
+  for(let r=0;r<rows;r++){const row=[];for(let c=0;c<cols;c++)row.push(data[r]?.[c]??'');padded.push(row);}
+  const colDefs=columns.length?columns:Array.from({length:cols},(_,i)=>({title:String.fromCharCode(65+i),width:100,type:'text'}));
+  _wsInst=jspreadsheet(el,{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,pagination:100,freezeColumns:0});
+}
+async function openNewWorksheet(){
+  await _loadSpreadsheetLibs();
+  _wsCurrentEntryId=null;_wsCurrentTopicId=currentTopicId;
+  document.getElementById('worksheetTitle').value='';
+  _initSpreadsheet([],[]);
+  document.getElementById('worksheetOverlay').classList.add('show');
+}
+async function openWorksheetEntry(entryId,ev){
+  if(ev)ev.stopPropagation();
+  const topicId=currentTopicId;
+  const entries=allEntries[topicId]||{};
+  let e=entries[entryId];
+  if(!e&&window._fb){
+    const{db,ref,get}=window._fb;
+    const snap=await get(ref(db,'topics/'+topicId+'/entries/'+entryId));
+    e=snap.val();
+  }
+  if(!e){toast('Could not load worksheet',false);return;}
+  await _loadSpreadsheetLibs();
+  _wsCurrentEntryId=entryId;_wsCurrentTopicId=topicId;
+  document.getElementById('worksheetTitle').value=e.title||'';
+  _initSpreadsheet(e.data||[[]],e.columns||[]);
+  document.getElementById('worksheetOverlay').classList.add('show');
+}
+function closeWorksheet(){
+  document.getElementById('worksheetOverlay').classList.remove('show');
+  setTimeout(()=>{document.getElementById('worksheetContainer').innerHTML='';_wsInst=null;},300);
+}
+async function saveWorksheet(){
+  if(!_wsInst||!window._fb){toast('Nothing to save',false);return;}
+  const title=document.getElementById('worksheetTitle').value.trim()||'Worksheet';
+  const data=_wsInst.getData();
+  const colCfg=(_wsInst.getConfig?.()?.columns||[]).map(c=>({title:c.title||'',width:c.width||100,type:'text'}));
+  const{db,ref,update,push}=window._fb;
+  if(_wsCurrentEntryId){
+    await update(ref(db,'topics/'+_wsCurrentTopicId+'/entries/'+_wsCurrentEntryId),{title,data,columns:colCfg});
+    toast('Worksheet updated',true);
+  }else{
+    const entry={type:'worksheet',title,data,columns:colCfg,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()};
+    const savedTopic=currentTopicId;
+    if(savedTopic===_wsCurrentTopicId){pushEntry(entry);}
+    else{push(ref(db,'topics/'+_wsCurrentTopicId+'/entries'),entry);}
+    toast('Worksheet saved',true);
+  }
+  closeWorksheet();
+}
 function fileToBase64(f){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(f);});}
 function downloadFile(filename,src){const a=document.createElement('a');a.href=src;a.download=filename;a.click();}
 async function resizeImg(file,maxW){return new Promise(res=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);const c=document.createElement('canvas');let w=img.naturalWidth,h=img.naturalHeight;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',.85));};img.src=url;});}
