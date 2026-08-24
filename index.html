@@ -1372,7 +1372,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.7';
+  const _ver='v4.8';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3043,7 +3043,9 @@ function _initSpreadsheet(data,columns){
   const padded=[];
   for(let r=0;r<rows;r++){const row=[];for(let c=0;c<cols;c++)row.push(data[r]?.[c]??'');padded.push(row);}
   const colDefs=columns&&columns.length?columns:Array.from({length:cols},(_,i)=>({title:String.fromCharCode(65+i),width:100,type:'text'}));
-  _wsInst=jspreadsheet(el,{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,pagination:100});
+  try{
+    _wsInst=jspreadsheet(el,{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,pagination:100});
+  }catch(e){toast('Spreadsheet failed to load: '+e.message,false);console.error('jspreadsheet init error:',e);}
 }
 async function openNewWorksheet(){
   await _loadSpreadsheetLibs();
@@ -3073,23 +3075,30 @@ function closeWorksheet(){
   setTimeout(()=>{document.getElementById('worksheetContainer').innerHTML='';_wsInst=null;},300);
 }
 async function saveWorksheet(){
-  if(!_wsInst||!window._fb){toast('Nothing to save',false);return;}
+  if(!window._fb){toast('Not connected — try reloading',false);return;}
+  if(!_wsInst){toast('Spreadsheet not ready — wait a moment and try again',false);return;}
   const title=document.getElementById('worksheetTitle').value.trim()||'Spreadsheet';
-  const data=_wsInst.getData();
-  const colCfg=(_wsInst.getConfig?.()?.columns||[]).map(c=>({title:c.title||'',width:c.width||100,type:'text'}));
+  let data,colCfg;
+  try{data=_wsInst.getData();colCfg=(_wsInst.getConfig?.()?.columns||[]).map(c=>({title:c.title||'',width:c.width||100,type:'text'}));}
+  catch(e){toast('Could not read spreadsheet data',false);console.error(e);return;}
   const{db,ref,set,update}=window._fb;
-  if(_wsCurrentDocId){
-    await set(ref(db,'docs/'+_wsCurrentDocId+'/data'),{data,columns:colCfg});
-    await update(ref(db,'docs/meta/'+_wsCurrentDocId),{name:title,lastEditedBy:myName,lastEditedAt:Date.now()});
-    toast('Spreadsheet saved',true);
-  }else{
-    const id='doc_'+Date.now().toString(36);
-    const meta={name:title,type:'worksheet',createdBy:myName,creatorId:myId,ts:Date.now()};
-    await set(ref(db,'docs/meta/'+id),meta);
-    await set(ref(db,'docs/'+id+'/data'),{data,columns:colCfg});
-    toast('Spreadsheet created',true);
+  try{
+    if(_wsCurrentDocId){
+      await set(ref(db,'docs/'+_wsCurrentDocId+'/data'),{data,columns:colCfg});
+      await update(ref(db,'docs/meta/'+_wsCurrentDocId),{name:title,lastEditedBy:myName,lastEditedAt:Date.now()});
+      toast('Spreadsheet saved',true);
+    }else{
+      const id='doc_'+Date.now().toString(36);
+      const meta={name:title,type:'worksheet',createdBy:myName,creatorId:myId,ts:Date.now()};
+      await set(ref(db,'docs/meta/'+id),meta);
+      await set(ref(db,'docs/'+id+'/data'),{data,columns:colCfg});
+      toast('Spreadsheet created',true);
+    }
+    closeWorksheet();
+  }catch(e){
+    toast('Save failed: '+(e.message||'check Firebase rules'),false);
+    console.error('saveWorksheet error:',e);
   }
-  closeWorksheet();
 }
 // Wire up the sidebar file input for CSV/Excel → Documents
 document.addEventListener('DOMContentLoaded',()=>{
