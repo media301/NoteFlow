@@ -1212,7 +1212,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v2.8';
+  const _ver='v2.9';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1639,6 +1639,7 @@ function switchToActionItems(){
     renderActionItems(allEntries,groupEntries);
   }).catch(()=>renderActionItems(allEntries));
 }
+function getAssignees(e){return e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[]}
 function buildTaskCard(id,e,basePath,color){
   const card=document.createElement('div');
   card.className='task-card'+(e.completed?' done':'');
@@ -1704,7 +1705,7 @@ function renderActionItems(topicEntries,groupEntries){
     });
   }
   items.sort((a,b)=>(b.e.ts||0)-(a.e.ts||0));
-  const getAssignees=e=>e.assignedTo?(Array.isArray(e.assignedTo)?e.assignedTo:[e.assignedTo]):[];
+  // getAssignees is defined at top level — see below
   // Filter bar
   const profiles=Object.entries(allProfiles).filter(([id])=>id!==myId);
   if(profiles.length){
