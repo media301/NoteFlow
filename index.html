@@ -330,7 +330,8 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .ws-row-btns{display:flex;align-items:center;gap:4px;padding:0 8px;border-left:1px solid #ddd;height:100%;flex-shrink:0;}
 .ws-row-btn{background:#eee;border:1px solid #ccc;border-radius:5px;color:#444;font-size:11px;font-weight:600;padding:2px 7px;cursor:pointer;white-space:nowrap;font-family:inherit;}
 .ws-row-btn:hover{background:#1FD69C;border-color:#1FD69C;color:#000;}
-#worksheetContainer{flex:1;overflow:auto;min-height:0;height:0;color-scheme:light;}
+#worksheetContainer{flex:1;overflow:auto;min-height:0;height:0;color-scheme:light;color:#000;}
+#worksheetContainer td,#worksheetContainer th,#worksheetContainer td *,#worksheetContainer td input{color:#000!important;}
 .entry-worksheet{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;}
 .entry-worksheet .ws-icon{font-size:22px;}
 .entry-worksheet .ws-info{flex:1}
@@ -1434,7 +1435,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v5.12';
+  const _ver='v5.13';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3170,7 +3171,17 @@ async function openWorksheetDoc(docId){
     const{db,ref,get}=window._fb;
     const snap=await get(ref(db,'docs/'+docId+'/data'));
     const stored=snap.val();
-    if(stored){storedData=stored.data||[[]];storedCols=stored.columns||[];}
+    if(stored){
+      let d=stored.data||[[]];
+      // Firebase may return arrays as objects if any cells were null — normalize back
+      if(d&&!Array.isArray(d)){
+        const keys=Object.keys(d).map(Number).sort((a,b)=>a-b);
+        d=keys.map(k=>{let row=d[k];if(row&&!Array.isArray(row)){const rk=Object.keys(row).map(Number).sort((a,b)=>a-b);const r=[];rk.forEach(i=>r[i]=row[i]??'');return r;}return row||[];});
+      }
+      storedData=d;
+      storedCols=stored.columns||[];
+      if(storedCols&&!Array.isArray(storedCols))storedCols=Object.values(storedCols);
+    }
   }
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     _initSpreadsheet(storedData,storedCols);
@@ -3187,8 +3198,12 @@ async function saveWorksheet(){
   if(!_wsInst){toast('Spreadsheet not ready — wait a moment and try again',false);return;}
   const title=document.getElementById('worksheetTitle').value.trim()||'Spreadsheet';
   let data,colCfg;
-  try{data=_wsInst.getData();colCfg=(_wsInst.getConfig?.()?.columns||[]).map(c=>({title:c.title||'',width:c.width||100}));}
-  catch(e){toast('Could not read spreadsheet data',false);console.error(e);return;}
+  try{
+    const raw=_wsInst.getData();
+    // Sanitize: Firebase omits nulls which corrupts array indices on reload
+    data=raw.map(row=>(row||[]).map(v=>v===null||v===undefined?'':v));
+    colCfg=(_wsInst.getConfig?.()?.columns||[]).map(c=>({title:c.title||'',width:c.width||100}));
+  }catch(e){toast('Could not read spreadsheet data',false);console.error(e);return;}
   const{db,ref,set,update}=window._fb;
   try{
     if(_wsCurrentDocId){
