@@ -1153,10 +1153,10 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
   </div>
   <div class="mobile-panel-sec">
     <div class="mobile-panel-label">Views</div>
-    <div class="nav-row" onclick="switchToActionItems();showMobileTab('notes')">
+    <div class="nav-row" onclick="showMobileTab('actions')">
       <span class="row-icon">✅</span><span class="row-label">Tasks</span>
     </div>
-    <div class="nav-row" onclick="switchToFiles();showMobileTab('notes')">
+    <div class="nav-row" onclick="switchToFiles();document.getElementById('mobileTopicsPanel').classList.remove('show')">
       <span class="row-icon">📎</span><span class="row-label">Files</span>
     </div>
   </div>
@@ -1319,7 +1319,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.2';
+  const _ver='v4.3';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
