@@ -175,6 +175,7 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
             background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;}
 .pane-title{display:flex;align-items:center;gap:6px;flex:1;min-width:0;font-size:15px;font-weight:600;}
 .pane-hash{color:var(--ac);font-size:17px;font-weight:700;}
+.pane-topic-select{background:none;border:none;color:var(--text);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;outline:none;max-width:200px;}
 .pane-dm-badge{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
                justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0;}
 .pane-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1212,7 +1213,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v3.2';
+  const _ver='v3.3';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1399,6 +1400,21 @@ function renderOnline(recent){
 }
 
 // ── TOPICS ───────────────────────────────────────────
+function _setPaneTitleSelect(type,activeId){
+  const pt=document.getElementById('paneTitle');
+  const topics=Object.entries(allTopics).sort((a,b)=>{if(a[0]==='general')return -1;if(b[0]==='general')return 1;return(a[1].ts||0)-(b[1].ts||0);});
+  const groups=Object.entries(allGroups||{}).filter(([id])=>myGroupIds.has(id));
+  let opts='';
+  if(topics.length){opts+=`<optgroup label="Topics">`+topics.map(([id,t])=>`<option value="topic:${id}"${type==='topic'&&id===activeId?' selected':''}># ${esc(t.title||id)}</option>`).join('')+`</optgroup>`;}
+  if(groups.length){opts+=`<optgroup label="Groups">`+groups.map(([id,g])=>`<option value="group:${id}"${type==='group'&&id===activeId?' selected':''}>${esc(g.name||id)}</option>`).join('')+`</optgroup>`;}
+  const prefix=type==='group'?'<span class="pane-hash" style="color:var(--purple)">👥</span>':'<span class="pane-hash">#</span>';
+  pt.innerHTML=`${prefix}<select class="pane-topic-select" onchange="_onPaneTitleChange(this.value)">${opts}</select>`;
+}
+function _onPaneTitleChange(val){
+  const[type,id]=val.split(':');
+  if(type==='topic')switchTopic(id);
+  else if(type==='group')switchGroup(id);
+}
 function renderTopicList(){
   const sorted=Object.entries(allTopics).sort((a,b)=>{if(a[0]==='general')return -1;if(b[0]==='general')return 1;return (a[1].ts||0)-(b[1].ts||0);});
   const rows=sorted.map(([id,t])=>{
@@ -1434,7 +1450,7 @@ function switchTopic(topicId){
   clearMentionsForTopic(topicId);
   stopTypingIndicator();
   const title=(allTopics[topicId]&&allTopics[topicId].title)||topicId;
-  document.getElementById('paneTitle').innerHTML=`<span class="pane-hash">#</span><span class="pane-label">${esc(title)}</span>`;
+  _setPaneTitleSelect('topic',topicId);
   document.getElementById('noteInput').placeholder='Type a note and press Enter…';
   document.getElementById('inputArea').style.display='';
   document.getElementById('actionToolbar').style.display='';
@@ -1623,7 +1639,10 @@ function switchToActionItems(){
   _populateTaskDestSelect();
   actionFilterUserId=null;
   clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading tasks…';
-  forceIosRepaint();renderTopicList();closeSheet();
+  renderTopicList();closeSheet();
+  // Show cached data instantly (within tap gesture so iOS renders it)
+  if(window._lastActionData)renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});
+  forceIosRepaint();
   if(!window._fb){renderActionItems({});return;}
   const{db,ref,get}=window._fb;
   const topicIds=Object.keys(allTopics);
@@ -2535,8 +2554,7 @@ function switchGroup(groupId){
   currentView='group';currentGroupId=groupId;currentDmWith=null;
   stopTypingIndicator();cancelReply();cancelActionTag();
   const g=allGroups[groupId]||{name:groupId};
-  document.getElementById('paneTitle').innerHTML=
-    `<span class="pane-hash" style="color:var(--purple)">👥</span><span class="pane-label">${esc(g.name)}</span>`;
+  _setPaneTitleSelect('group',groupId);
   const isGroupAdmin=g.creatorId===myId||g.createdBy===myName||(!g.creatorId&&!g.passphrase);
   document.getElementById('groupMembersBtn').classList.toggle('grp-active',isGroupAdmin||!!g.passphrase);
   document.getElementById('inputArea').style.display='';
@@ -2738,7 +2756,6 @@ function startRec(){
       const cur=inp.value;
       inp.value=(cur&&!cur.endsWith(' ')?cur+' ':cur)+final.trim();
       inp.style.height='auto';inp.style.height=inp.scrollHeight+'px';
-      inp.focus();
     }
   };
   recog.onerror=e=>{if(e.error!=='no-speech')toast('Mic error: '+e.error,false);};
@@ -2829,10 +2846,11 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
   if(!('ontouchstart' in window))return;
-  clearTimeout(window._iosRafTimer);
-  window._iosRafActive=true;
-  window._iosRafTimer=setTimeout(()=>{window._iosRafActive=false;},1500);
-  (function p(){if(window._iosRafActive)requestAnimationFrame(p);})();
+  const feed=document.querySelector('.feed-scroll');
+  if(!feed)return;
+  // Briefly toggle a layout property so iOS WKWebView commits a new GPU frame
+  feed.style.transform='translateZ(0)';
+  requestAnimationFrame(()=>{feed.style.transform='';});
 }
 let mobileTab='notes';
 function showMobileTab(tab){
@@ -2913,7 +2931,10 @@ function switchToFiles(){
   document.getElementById('actionItemsRow').classList.remove('action-active');
   document.getElementById('filesRow').classList.add('action-active');
   document.getElementById('inputArea').style.display='none';
-  clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading files…';forceIosRepaint();renderTopicList();closeSheet();
+  clearFeed();document.getElementById('feedEmptyMsg').textContent='Loading files…';
+  renderTopicList();closeSheet();
+  if(window._lastFilesData)renderFiles(window._lastFilesData);
+  forceIosRepaint();
   if(!window._fb){renderFiles([]);return;}
   const{db,ref,get}=window._fb;
   const topicIds=Object.keys(allTopics);
@@ -2956,6 +2977,7 @@ function closeLightbox(){
 
 function renderFiles(items){
   if(currentView!=='files')return;
+  window._lastFilesData=items;
   const feed=document.getElementById('feed');
   [...feed.children].forEach(el=>{if(el.id!=='feedEmpty')el.remove();});
   const empty=document.getElementById('feedEmpty');
@@ -2987,7 +3009,7 @@ function renderFiles(items){
       row.className='file-lib-row';
       const time=e.ts?new Date(e.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';
       const thumbHtml=isImg&&hasSrc
-        ?`<img class="file-lib-thumb" src="${esc(e.src)}" alt="${esc(e.filename||'')}" onclick="openLightbox('${esc(e.src)}','${esc(e.filename||'photo')}')">`
+        ?`<img class="file-lib-thumb" src="${esc(e.src)}" alt="${esc(e.filename||'')}" onload="forceIosRepaint()" onclick="openLightbox('${esc(e.src)}','${esc(e.filename||'photo')}')">`
         :`<div class="file-lib-icon" style="font-size:2rem;width:52px;text-align:center">${esc(e.icon||'📄')}</div>`;
       const btnsHtml=hasSrc
         ?`<div class="file-lib-btns">${isImg?`<button class="file-lib-view" onclick="openLightbox('${esc(e.src)}','${esc(e.filename||'photo')}')">👁 View</button>`:''}
