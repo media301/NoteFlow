@@ -175,7 +175,8 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
             background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;}
 .pane-title{display:flex;align-items:center;gap:6px;flex:1;min-width:0;font-size:15px;font-weight:600;}
 .pane-hash{color:var(--ac);font-size:17px;font-weight:700;}
-.pane-topic-select{background:none;border:none;color:var(--text);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;outline:none;max-width:200px;}
+.pane-topic-select{background:var(--surf);border:none;color:var(--text);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;outline:none;max-width:200px;color-scheme:dark light;}
+.pane-topic-select option,.pane-topic-select optgroup{background:var(--surf);color:var(--text);}
 .pane-dm-badge{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
                justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0;}
 .pane-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -262,6 +263,42 @@ aside{width:218px;background:var(--surf);border-right:1px solid var(--border);
 .assign-chip.selected{border-color:var(--red);background:var(--redbg);color:var(--text);}
 .assign-chip .ac-dot{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font-size:7px;font-weight:700;color:#000;flex-shrink:0;}
+/* iOS-style people picker sheets */
+.ios-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-radius:12px 12px 0 0;
+  padding:0;z-index:500;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,1,.23,1);
+  max-height:75vh;display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;}
+.ios-sheet.show{transform:translateY(0);}
+.ios-sheet-handle{width:36px;height:5px;border-radius:3px;background:var(--brd2);margin:10px auto 4px;flex-shrink:0;}
+.ios-sheet-header{display:flex;align-items:center;justify-content:space-between;padding:8px 20px 6px;flex-shrink:0;}
+.ios-sheet-title{font-size:17px;font-weight:600;color:var(--text);}
+.ios-sheet-done{background:none;border:none;color:var(--ac);font-size:17px;font-weight:600;cursor:pointer;padding:2px 0;font-family:inherit;}
+.ios-search-wrap{padding:4px 16px 8px;flex-shrink:0;}
+.ios-search{width:100%;box-sizing:border-box;background:var(--card2);border:none;border-radius:10px;
+  padding:7px 12px 7px 32px;color:var(--text);font-size:15px;font-family:inherit;outline:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:10px center;}
+.ios-list{overflow-y:auto;flex:1;}
+.ios-list-row{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;position:relative;}
+.ios-list-row:active{background:var(--card2);}
+.ios-list-row::after{content:'';position:absolute;bottom:0;left:72px;right:0;height:.5px;background:var(--border);}
+.ios-list-row:last-child::after{display:none;}
+.ios-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:#000;flex-shrink:0;}
+.ios-row-name{flex:1;font-size:16px;color:var(--text);}
+.ios-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:700;color:#000;flex-shrink:0;transition:all .15s;}
+.ios-check.on{background:var(--ac);border-color:var(--ac);color:#000;}
+.ios-filter-pill{display:flex;align-items:center;gap:5px;background:var(--card);
+  border:1.5px solid var(--border);border-radius:20px;color:var(--dim2);font-size:13px;font-weight:600;
+  padding:5px 12px;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+  white-space:nowrap;transition:border-color .15s,color .15s;}
+.ios-filter-pill.active{border-color:var(--ac);color:var(--ac);}
+.ios-assign-btn{display:flex;align-items:center;gap:5px;background:none;
+  border:1.5px solid var(--border);border-radius:20px;color:var(--dim2);font-size:11px;font-weight:600;
+  padding:3px 10px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;}
+.ios-assign-btn.has-assignees{border-color:var(--amber);color:var(--amber);}
+.ios-sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:499;}
+.ios-sheet-overlay.show{display:block;}
 .pin-badge{font-size:10px;color:var(--amber);}
 .entry-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s;flex-wrap:wrap;}
 .note-entry:hover .entry-actions{opacity:1;}
@@ -752,7 +789,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <span style="font-size:14px">✅</span>
         <span class="action-toggle-label">Task</span>
         <select id="taskDestSelect" style="display:none;font-size:11px;font-weight:600;background:var(--card);border:1px solid var(--brd2);border-radius:6px;color:var(--text);padding:2px 4px;cursor:pointer;max-width:110px;flex-shrink:0;font-family:inherit;" title="Post task to…"></select>
-        <div id="assignPicker" style="display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;padding:0 4px;"></div>
+        <button id="assignPickerBtn" class="ios-assign-btn" onclick="openAssignSheet()">👤 Assign…</button>
         <button class="action-x" onclick="cancelActionTag()">×</button>
       </div>
       <div class="action-toggle-bar cl-bar" id="checklistBar">
@@ -979,6 +1016,34 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     </div>
     <button class="modal-secondary" onclick="closeShare()">Done</button>
   </div>
+</div>
+
+<!-- person filter sheet (iOS-style) -->
+<div class="ios-sheet-overlay" id="personFilterOverlay" onclick="closePersonFilterSheet()"></div>
+<div class="ios-sheet" id="personFilterSheet">
+  <div class="ios-sheet-handle"></div>
+  <div class="ios-sheet-header">
+    <span class="ios-sheet-title">Filter Tasks</span>
+    <button class="ios-sheet-done" onclick="closePersonFilterSheet()">Done</button>
+  </div>
+  <div class="ios-search-wrap">
+    <input class="ios-search" id="personFilterSearch" type="search" placeholder="Search people…" oninput="_filterSheetSearch(this.value)" autocomplete="off">
+  </div>
+  <div class="ios-list" id="personFilterList"></div>
+</div>
+
+<!-- assign people sheet (iOS-style) -->
+<div class="ios-sheet-overlay" id="assignSheetOverlay" onclick="closeAssignSheet()"></div>
+<div class="ios-sheet" id="assignSheet">
+  <div class="ios-sheet-handle"></div>
+  <div class="ios-sheet-header">
+    <span class="ios-sheet-title">Assign To</span>
+    <button class="ios-sheet-done" onclick="closeAssignSheet()">Done</button>
+  </div>
+  <div class="ios-search-wrap">
+    <input class="ios-search" id="assignSheetSearch" type="search" placeholder="Search people…" oninput="_assignSheetSearch(this.value)" autocomplete="off">
+  </div>
+  <div class="ios-list" id="assignSheetList"></div>
 </div>
 
 <!-- mobile sheet -->
@@ -1213,7 +1278,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v3.5';
+  const _ver='v3.8';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1352,6 +1417,33 @@ function initFirebase(){
     onValue(ref(db,'docs/meta'),snap=>{allDocs=snap.val()||{};renderDocList();});
     listenMentions();
     switchTopic('general');
+    // Pre-fetch files + tasks into cache so iOS can render them synchronously on first tap
+    setTimeout(()=>{
+      if(!window._fb)return;
+      const{db,ref,get}=window._fb;
+      const tIds=Object.keys(allTopics);
+      const gIds=[...myGroupIds];
+      // Pre-fetch files cache
+      const allIds=[...tIds,...gIds];
+      Promise.all(allIds.map(id=>{
+        const isGrp=gIds.includes(id);
+        return get(ref(db,(isGrp?'groups/':'topics/')+id+'/entries')).then(s=>({id,isGrp,data:s.val()||{}}));
+      })).then(results=>{
+        const items=[];
+        results.forEach(r=>{
+          const label=r.isGrp?'👥'+(allGroups[r.id]?.name||r.id):'#'+(allTopics[r.id]?.title||r.id);
+          Object.values(r.data).forEach(e=>{if((e.type==='file'||e.type==='image')&&e.src)items.push({...e,source:label});});
+          if(!r.isGrp)allEntries[r.id]=r.data;
+        });
+        items.sort((a,b)=>(b.ts||0)-(a.ts||0));
+        window._lastFilesData=items;
+        // Pre-fetch tasks cache
+        const topicEntries={};
+        const groupEntries={};
+        results.forEach(r=>{if(r.isGrp)groupEntries[r.id]=r.data;else topicEntries[r.id]=r.data;});
+        window._lastActionData={topicEntries,groupEntries};
+      }).catch(()=>{});
+    },3000);
   },200);
 }
 
@@ -1707,11 +1799,6 @@ function renderActionItems(topicEntries,groupEntries){
   Object.entries(topicEntries).forEach(([topicId,entries])=>{
     Object.entries(entries).forEach(([id,e])=>{if(e.isAction)items.push({id,e,topicId,source:'#'+(allTopics[topicId]?.title||topicId)});});
   });
-  if(groupEntries){
-    Object.entries(groupEntries).forEach(([gid,entries])=>{
-      Object.entries(entries).forEach(([id,e])=>{if(e.isAction)items.push({id,e,topicId:gid,source:'👥'+(allGroups[gid]?.name||gid)});});
-    });
-  }
   if(allDmsData){
     Object.entries(allDmsData).forEach(([key,dmData])=>{
       if(!dmData.entries)return;
@@ -1729,20 +1816,24 @@ function renderActionItems(topicEntries,groupEntries){
   const profiles=Object.entries(allProfiles);
   if(profiles.length){
     const bar=document.createElement('div');
-    bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 10px;align-items:center;';
-    const allChip=document.createElement('div');
-    allChip.style.cssText=`font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;cursor:pointer;border:1.5px solid ${!actionFilterUserId?'var(--ac)':'var(--border)'};color:${!actionFilterUserId?'var(--ac)':'var(--dim)'};`;
-    allChip.textContent='All';
-    allChip.onclick=()=>{actionFilterUserId=null;renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});};
-    bar.appendChild(allChip);
-    profiles.forEach(([id,p])=>{
-      const chip=document.createElement('div');
-      const active=actionFilterUserId===id;
-      chip.style.cssText=`display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px 3px 4px;border-radius:20px;cursor:pointer;border:1.5px solid ${active?p.color:'var(--border)'};color:${active?p.color:'var(--dim2)'};`;
-      chip.innerHTML=`<div style="background:${p.color};width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000">${esc(p.initials)}</div>${esc(p.name.split(' ')[0])}`;
-      chip.onclick=()=>{actionFilterUserId=active?null:id;renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});};
-      bar.appendChild(chip);
-    });
+    bar.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 0 12px;';
+    const activePerson=actionFilterUserId?allProfiles[actionFilterUserId]:null;
+    const pill=document.createElement('button');
+    pill.className='ios-filter-pill'+(actionFilterUserId?' active':'');
+    if(activePerson){
+      pill.innerHTML=`<div style="background:${activePerson.color};width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;flex-shrink:0">${esc(activePerson.initials)}</div>${esc(activePerson.name.split(' ')[0])} ▾`;
+    }else{
+      pill.innerHTML=`<span style="font-size:15px">👤</span> All People ▾`;
+    }
+    pill.onclick=()=>openPersonFilterSheet();
+    bar.appendChild(pill);
+    if(actionFilterUserId){
+      const clearBtn=document.createElement('button');
+      clearBtn.style.cssText='background:none;border:none;color:var(--dim);font-size:13px;cursor:pointer;padding:2px 4px;font-family:inherit;';
+      clearBtn.textContent='Clear';
+      clearBtn.onclick=()=>{actionFilterUserId=null;if(window._lastActionData)renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});};
+      bar.appendChild(clearBtn);
+    }
     feed.appendChild(bar);
   }
   // Apply filter
@@ -2300,22 +2391,94 @@ function cancelReply(){replyingTo=null;document.getElementById('replyBanner').cl
 // ── ACTION TAG ────────────────────────────────────────
 function populateAssignPicker(){
   assignedUsers=[];
-  const picker=document.getElementById('assignPicker');
-  if(!picker)return;
-  const profiles=Object.entries(allProfiles).filter(([id])=>id!==myId);
-  if(!profiles.length){picker.innerHTML='<span style="font-size:11px;color:var(--dim)">No teammates yet</span>';return;}
-  picker.innerHTML='<span style="font-size:11px;color:var(--amber);white-space:nowrap;flex-shrink:0">Assign:</span>';
+  _updateAssignBtn();
+}
+function _updateAssignBtn(){
+  const btn=document.getElementById('assignPickerBtn');
+  if(!btn)return;
+  if(assignedUsers.length){
+    btn.textContent=`👤 ${assignedUsers.length} assigned`;
+    btn.classList.add('has-assignees');
+  }else{
+    btn.textContent='👤 Assign…';
+    btn.classList.remove('has-assignees');
+  }
+}
+// ── ASSIGN SHEET (iOS-style) ─────────────────────────
+function openAssignSheet(){
+  document.getElementById('assignSheetSearch').value='';
+  _buildAssignSheetList('');
+  document.getElementById('assignSheetOverlay').classList.add('show');
+  document.getElementById('assignSheet').classList.add('show');
+}
+function closeAssignSheet(){
+  document.getElementById('assignSheetOverlay').classList.remove('show');
+  document.getElementById('assignSheet').classList.remove('show');
+  _updateAssignBtn();
+}
+function _assignSheetSearch(q){_buildAssignSheetList(q);}
+function _buildAssignSheetList(q){
+  const list=document.getElementById('assignSheetList');
+  if(!list)return;
+  const lq=q.toLowerCase();
+  const profiles=Object.entries(allProfiles).filter(([id,p])=>!q||p.name.toLowerCase().includes(lq));
+  list.innerHTML='';
+  if(!profiles.length){
+    list.innerHTML='<div style="padding:20px;text-align:center;color:var(--dim);font-size:14px">No people found</div>';
+    return;
+  }
   profiles.forEach(([id,p])=>{
-    const chip=document.createElement('div');
-    chip.className='assign-chip';
-    chip.innerHTML=`<div class="ac-dot" style="background:${p.color}">${esc(p.initials)}</div><span>${esc(p.name.split(' ')[0])}</span>`;
-    chip.onclick=()=>{
+    const row=document.createElement('div');
+    row.className='ios-list-row';
+    const isOn=assignedUsers.some(u=>u.id===id);
+    row.innerHTML=`<div class="ios-avatar" style="background:${p.color}">${esc(p.initials)}</div><span class="ios-row-name">${esc(p.name)}</span><div class="ios-check${isOn?' on':''}">${isOn?'✓':''}</div>`;
+    row.onclick=()=>{
       const idx=assignedUsers.findIndex(u=>u.id===id);
-      if(idx>=0){assignedUsers.splice(idx,1);chip.classList.remove('selected');}
-      else{assignedUsers.push({id,name:p.name,initials:p.initials,color:p.color});chip.classList.add('selected');}
+      if(idx>=0)assignedUsers.splice(idx,1);
+      else assignedUsers.push({id,name:p.name,initials:p.initials,color:p.color});
+      _buildAssignSheetList(q);
     };
-    picker.appendChild(chip);
+    list.appendChild(row);
   });
+}
+// ── PERSON FILTER SHEET (iOS-style) ─────────────────
+function openPersonFilterSheet(){
+  document.getElementById('personFilterSearch').value='';
+  _buildPersonFilterList('');
+  document.getElementById('personFilterOverlay').classList.add('show');
+  document.getElementById('personFilterSheet').classList.add('show');
+}
+function closePersonFilterSheet(){
+  document.getElementById('personFilterOverlay').classList.remove('show');
+  document.getElementById('personFilterSheet').classList.remove('show');
+}
+function _filterSheetSearch(q){_buildPersonFilterList(q);}
+function _buildPersonFilterList(q){
+  const list=document.getElementById('personFilterList');
+  if(!list)return;
+  const lq=q.toLowerCase();
+  list.innerHTML='';
+  // "All People" row
+  if(!q){
+    const allRow=document.createElement('div');
+    allRow.className='ios-list-row';
+    const allOn=!actionFilterUserId;
+    allRow.innerHTML=`<div class="ios-avatar" style="background:var(--ac);font-size:10px;font-weight:700">ALL</div><span class="ios-row-name" style="font-weight:${allOn?600:400}">All People</span><div class="ios-check${allOn?' on':''}">${allOn?'✓':''}</div>`;
+    allRow.onclick=()=>{actionFilterUserId=null;closePersonFilterSheet();if(window._lastActionData)renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});};
+    list.appendChild(allRow);
+  }
+  const profiles=Object.entries(allProfiles).filter(([id,p])=>!q||p.name.toLowerCase().includes(lq));
+  profiles.forEach(([id,p])=>{
+    const row=document.createElement('div');
+    row.className='ios-list-row';
+    const isOn=actionFilterUserId===id;
+    row.innerHTML=`<div class="ios-avatar" style="background:${p.color}">${esc(p.initials)}</div><span class="ios-row-name" style="font-weight:${isOn?600:400}">${esc(p.name)}</span><div class="ios-check${isOn?' on':''}">${isOn?'✓':''}</div>`;
+    row.onclick=()=>{actionFilterUserId=id;closePersonFilterSheet();if(window._lastActionData)renderActionItems(window._lastActionData.topicEntries,window._lastActionData.groupEntries||{});};
+    list.appendChild(row);
+  });
+  if(!profiles.length&&q){
+    list.innerHTML+='<div style="padding:20px;text-align:center;color:var(--dim);font-size:14px">No people found</div>';
+  }
 }
 function _populateTaskDestSelect(){
   const sel=document.getElementById('taskDestSelect');
@@ -2877,9 +3040,10 @@ function forceIosRepaint(){
   if(!('ontouchstart' in window))return;
   const feed=document.querySelector('.feed-scroll');
   if(!feed)return;
-  // Briefly toggle a layout property so iOS WKWebView commits a new GPU frame
-  feed.style.transform='translateZ(0)';
-  requestAnimationFrame(()=>{feed.style.transform='';});
+  // Nudge scroll position to force iOS WKWebView to flush compositor
+  const s=feed.scrollTop;
+  feed.scrollTop=s+1;
+  requestAnimationFrame(()=>{feed.scrollTop=s;});
 }
 let mobileTab='notes';
 function showMobileTab(tab){
