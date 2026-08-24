@@ -748,7 +748,8 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <div id="groupList"><div class="sidebar-empty">No groups — create or join one</div></div>
       </div>
       <div class="sidebar-sec" id="docSection">
-        <div class="sidebar-label">Documents <button class="add-btn" onclick="showNewDoc()" title="New document">+</button></div>
+        <div class="sidebar-label">Documents <span style="display:flex;gap:4px"><button class="add-btn" onclick="showNewDoc()" title="New document">+</button><button class="add-btn" onclick="openNewWorksheet()" title="New spreadsheet">📊</button><label class="add-btn" for="docFileInput" title="Upload CSV or Excel" style="cursor:pointer">↑</label></span></div>
+        <input type="file" id="docFileInput" accept=".csv,.xlsx,.xls" style="display:none">
         <div id="docList"><div class="sidebar-empty">No documents yet</div></div>
       </div>
       <div class="sidebar-sec" id="dmSection" style="display:none">
@@ -870,7 +871,6 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           Attach File
         </label>
-        <button class="tool-btn" onclick="openNewWorksheet()">📊 Sheet</button>
         <button class="tool-btn" id="actionBtn" onclick="toggleActionTag()">✅ Task</button>
         <button class="tool-btn" id="checklistBtn" onclick="toggleChecklist()">📋 Checklist</button>
         <div style="width:1px;height:16px;background:var(--brd2);flex-shrink:0;margin:0 2px"></div>
@@ -1201,7 +1201,7 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
     <div id="mobileGroupList"><div class="sidebar-empty">No groups yet</div></div>
   </div>
   <div class="mobile-panel-sec">
-    <div class="mobile-panel-label">Documents <button class="add-btn" onclick="showNewDoc()">+</button></div>
+    <div class="mobile-panel-label">Documents <span style="display:flex;gap:4px"><button class="add-btn" onclick="showNewDoc()">+</button><button class="add-btn" onclick="openNewWorksheet()">📊</button><label class="add-btn" for="docFileInput" style="cursor:pointer">↑</label></span></div>
     <div id="mobileDocList"><div class="sidebar-empty">No documents yet</div></div>
   </div>
   <div class="mobile-panel-sec">
@@ -1372,7 +1372,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.4';
+  const _ver='v4.5';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3009,25 +3009,6 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
   const files=Array.from(e.target.files);e.target.value='';
   if(!files.length)return;
   const f=files[0];
-  const ext=f.name.split('.').pop().toLowerCase();
-  if(ext==='csv'||ext==='xlsx'||ext==='xls'){
-    toast('Loading spreadsheet…',true);
-    await _loadSpreadsheetLibs();
-    const reader=new FileReader();
-    reader.onload=async evt=>{
-      let data;
-      try{
-        if(ext==='csv'){data=_parseCSV(evt.target.result);}
-        else{const wb=XLSX.read(evt.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});}
-      }catch(_){toast('Could not read file',false);return;}
-      _wsCurrentEntryId=null;_wsCurrentTopicId=currentTopicId;
-      document.getElementById('worksheetTitle').value=f.name.replace(/\.[^.]+$/,'');
-      _initSpreadsheet(data,[]);
-      document.getElementById('worksheetOverlay').classList.add('show');
-    };
-    if(ext==='csv')reader.readAsText(f);else reader.readAsBinaryString(f);
-    return;
-  }
   if(f.type.startsWith('image/')){
     toast('Loading image…',true);
     const src=await resizeImg(f,900);
@@ -3049,7 +3030,7 @@ document.getElementById('fileInput').addEventListener('change',async e=>{
 function fileIcon(n){const e=n.split('.').pop().toLowerCase();return{pdf:'📕',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',csv:'📊',ppt:'📊',pptx:'📊',mp3:'🎵',wav:'🎵',mp4:'🎬',mov:'🎬',zip:'📦'}[e]||'📄';}
 
 // ── WORKSHEET ─────────────────────────────────────────
-let _wsCurrentEntryId=null,_wsCurrentTopicId=null,_wsInst=null;
+let _wsCurrentDocId=null,_wsInst=null;
 function _parseCSV(text){
   return text.trim().split('\n').map(row=>{const cells=[];let cur='',inQ=false;for(const c of row){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cells.push(cur);cur='';}else cur+=c;}cells.push(cur);return cells;});
 }
@@ -3061,31 +3042,28 @@ function _initSpreadsheet(data,columns){
   const cols=Math.max((data[0]||[]).length,MINC);
   const padded=[];
   for(let r=0;r<rows;r++){const row=[];for(let c=0;c<cols;c++)row.push(data[r]?.[c]??'');padded.push(row);}
-  const colDefs=columns.length?columns:Array.from({length:cols},(_,i)=>({title:String.fromCharCode(65+i),width:100,type:'text'}));
-  _wsInst=jspreadsheet(el,{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,pagination:100,freezeColumns:0});
+  const colDefs=columns&&columns.length?columns:Array.from({length:cols},(_,i)=>({title:String.fromCharCode(65+i),width:100,type:'text'}));
+  _wsInst=jspreadsheet(el,{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,pagination:100});
 }
 async function openNewWorksheet(){
   await _loadSpreadsheetLibs();
-  _wsCurrentEntryId=null;_wsCurrentTopicId=currentTopicId;
+  _wsCurrentDocId=null;
   document.getElementById('worksheetTitle').value='';
   _initSpreadsheet([],[]);
   document.getElementById('worksheetOverlay').classList.add('show');
 }
-async function openWorksheetEntry(entryId,ev){
-  if(ev)ev.stopPropagation();
-  const topicId=currentTopicId;
-  const entries=allEntries[topicId]||{};
-  let e=entries[entryId];
-  if(!e&&window._fb){
-    const{db,ref,get}=window._fb;
-    const snap=await get(ref(db,'topics/'+topicId+'/entries/'+entryId));
-    e=snap.val();
-  }
-  if(!e){toast('Could not load worksheet',false);return;}
+async function openWorksheetDoc(docId){
+  const d=allDocs[docId]||{};
   await _loadSpreadsheetLibs();
-  _wsCurrentEntryId=entryId;_wsCurrentTopicId=topicId;
-  document.getElementById('worksheetTitle').value=e.title||'';
-  _initSpreadsheet(e.data||[[]],e.columns||[]);
+  _wsCurrentDocId=docId;
+  document.getElementById('worksheetTitle').value=d.name||'';
+  toast('Loading spreadsheet…',true);
+  if(window._fb){
+    const{db,ref,get}=window._fb;
+    const snap=await get(ref(db,'docs/'+docId+'/data'));
+    const stored=snap.val();
+    _initSpreadsheet(stored?.data||[[]],stored?.columns||[]);
+  }else{_initSpreadsheet([[]],[]);}
   document.getElementById('worksheetOverlay').classList.add('show');
 }
 function closeWorksheet(){
@@ -3094,22 +3072,48 @@ function closeWorksheet(){
 }
 async function saveWorksheet(){
   if(!_wsInst||!window._fb){toast('Nothing to save',false);return;}
-  const title=document.getElementById('worksheetTitle').value.trim()||'Worksheet';
+  const title=document.getElementById('worksheetTitle').value.trim()||'Spreadsheet';
   const data=_wsInst.getData();
   const colCfg=(_wsInst.getConfig?.()?.columns||[]).map(c=>({title:c.title||'',width:c.width||100,type:'text'}));
-  const{db,ref,update,push}=window._fb;
-  if(_wsCurrentEntryId){
-    await update(ref(db,'topics/'+_wsCurrentTopicId+'/entries/'+_wsCurrentEntryId),{title,data,columns:colCfg});
-    toast('Worksheet updated',true);
+  const{db,ref,set,update}=window._fb;
+  if(_wsCurrentDocId){
+    await set(ref(db,'docs/'+_wsCurrentDocId+'/data'),{data,columns:colCfg});
+    await update(ref(db,'docs/meta/'+_wsCurrentDocId),{name:title,lastEditedBy:myName,lastEditedAt:Date.now()});
+    toast('Spreadsheet saved',true);
   }else{
-    const entry={type:'worksheet',title,data,columns:colCfg,name:myName,initials:myInitials,color:myColor,authorId:myId,ts:Date.now()};
-    const savedTopic=currentTopicId;
-    if(savedTopic===_wsCurrentTopicId){pushEntry(entry);}
-    else{push(ref(db,'topics/'+_wsCurrentTopicId+'/entries'),entry);}
-    toast('Worksheet saved',true);
+    const id='doc_'+Date.now().toString(36);
+    const meta={name:title,type:'worksheet',createdBy:myName,creatorId:myId,ts:Date.now()};
+    await set(ref(db,'docs/meta/'+id),meta);
+    await set(ref(db,'docs/'+id+'/data'),{data,columns:colCfg});
+    toast('Spreadsheet created',true);
   }
   closeWorksheet();
 }
+// Wire up the sidebar file input for CSV/Excel → Documents
+document.addEventListener('DOMContentLoaded',()=>{
+  const inp=document.getElementById('docFileInput');
+  if(!inp)return;
+  inp.addEventListener('change',async e=>{
+    const f=e.target.files[0];e.target.value='';
+    if(!f)return;
+    const ext=f.name.split('.').pop().toLowerCase();
+    toast('Loading spreadsheet…',true);
+    await _loadSpreadsheetLibs();
+    const reader=new FileReader();
+    reader.onload=async evt=>{
+      let parsed;
+      try{
+        if(ext==='csv'){parsed=_parseCSV(evt.target.result);}
+        else{const wb=XLSX.read(evt.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];parsed=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});}
+      }catch(_){toast('Could not read file',false);return;}
+      _wsCurrentDocId=null;
+      document.getElementById('worksheetTitle').value=f.name.replace(/\.[^.]+$/,'');
+      _initSpreadsheet(parsed,[]);
+      document.getElementById('worksheetOverlay').classList.add('show');
+    };
+    if(ext==='csv')reader.readAsText(f);else reader.readAsBinaryString(f);
+  });
+});
 function fileToBase64(f){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(f);});}
 function downloadFile(filename,src){const a=document.createElement('a');a.href=src;a.download=filename;a.click();}
 async function resizeImg(file,maxW){return new Promise(res=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);const c=document.createElement('canvas');let w=img.naturalWidth,h=img.naturalHeight;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',.85));};img.src=url;});}
@@ -3458,11 +3462,12 @@ function renderDocList(){
     .sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
   const makeRow=(id,d,mobile)=>{
     const isActive=!mobile&&currentView==='doc'&&currentDocId===id;
-    const click=mobile?`openDoc('${esc(id)}');showMobileTab('notes')`:`openDoc('${esc(id)}')`;
+    const isSheet=d.type==='worksheet';
+    const click=mobile?(isSheet?`openWorksheetDoc('${esc(id)}');showMobileTab('notes')`:`openDoc('${esc(id)}');showMobileTab('notes')`):(isSheet?`openWorksheetDoc('${esc(id)}')`:`openDoc('${esc(id)}')`);
     const moreClick=`event.stopPropagation();showDocMenu('${esc(id)}')`;
     const groupLabel=d.groupId&&allGroups[d.groupId]?` <span style="font-size:9px;color:var(--dim);background:var(--card2);border-radius:4px;padding:1px 4px">👥${esc(allGroups[d.groupId].name||'')}</span>`:'';
     return `<div class="nav-row${isActive?' active':''}" onclick="${click}" style="padding-right:2px">
-      <span class="row-icon" style="color:var(--amber)">📄</span>
+      <span class="row-icon" style="color:${isSheet?'var(--ac)':'var(--amber)'}">${isSheet?'📊':'📄'}</span>
       <span class="row-label">${esc(d.name)}${groupLabel}</span>
       <button class="icon-btn" style="font-size:13px;color:var(--dim);padding:2px 4px;margin-left:auto;flex-shrink:0" onmousedown="event.stopPropagation()" onclick="${moreClick}" title="Rename or delete">⋯</button>
     </div>`;
