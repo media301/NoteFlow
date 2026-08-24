@@ -1212,7 +1212,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v2.9';
+  const _ver='v3.0';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1765,8 +1765,8 @@ function renderActionItems(topicEntries,groupEntries){
       });
     });
   };
-  addSection('Assigned to Me','#F0605A',assignedToMe,false);
-  addSection('My Tasks','var(--amber)',mine,false);
+  addSection('My Tasks','#F0605A',assignedToMe,false);
+  addSection('Created by Me','var(--amber)',mine,false);
   addSection('Team Tasks','var(--dim2)',others,false);
   addSection('Completed','var(--ac)',done,true);
   const fw=document.getElementById('feed');if(fw)fw.scrollTop=0;
