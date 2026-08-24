@@ -1213,7 +1213,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v3.3';
+  const _ver='v3.4';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1726,7 +1726,7 @@ function renderActionItems(topicEntries,groupEntries){
   items.sort((a,b)=>(b.e.ts||0)-(a.e.ts||0));
   // getAssignees is defined at top level — see below
   // Filter bar
-  const profiles=Object.entries(allProfiles).filter(([id])=>id!==myId);
+  const profiles=Object.entries(allProfiles);
   if(profiles.length){
     const bar=document.createElement('div');
     bar.style.cssText='display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 10px;align-items:center;';
