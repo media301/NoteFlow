@@ -40,19 +40,23 @@
 <link rel="stylesheet" id="jspreadsheetCss" href="" disabled>
 <script>
 function _loadSpreadsheetLibs(){
-  return new Promise(res=>{
+  return new Promise((res,rej)=>{
     if(window.jspreadsheet){res();return;}
     const base='https://cdn.jsdelivr.net/npm/';
     const lc1=document.getElementById('jsuitesCss');
     const lc2=document.getElementById('jspreadsheetCss');
-    lc1.href=base+'jsuites@3/dist/jsuites.min.css';lc1.removeAttribute('disabled');
-    lc2.href=base+'jspreadsheet-ce@3/dist/jspreadsheet.min.css';lc2.removeAttribute('disabled');
-    const s1=document.createElement('script');s1.src=base+'jsuites@3/dist/jsuites.min.js';
+    lc1.href=base+'jsuites@5.0.0/dist/jsuites.min.css';lc1.removeAttribute('disabled');
+    lc2.href=base+'jspreadsheet-ce@4.9.0/dist/jspreadsheet.min.css';lc2.removeAttribute('disabled');
+    const fail=msg=>{toast('Spreadsheet library failed to load — check your connection',false);rej(new Error(msg));};
+    const s1=document.createElement('script');s1.src=base+'jsuites@5.0.0/dist/jsuites.min.js';
+    s1.onerror=()=>fail('jsuites failed');
     s1.onload=()=>{
-      const s2=document.createElement('script');s2.src=base+'jspreadsheet-ce@3/dist/jspreadsheet.min.js';
+      const s2=document.createElement('script');s2.src=base+'jspreadsheet-ce@4.9.0/dist/index.min.js';
+      s2.onerror=()=>fail('jspreadsheet failed');
       s2.onload=()=>{
         if(window.XLSX){res();return;}
         const s3=document.createElement('script');s3.src='https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
+        s3.onerror=()=>fail('xlsx failed');
         s3.onload=res;document.head.appendChild(s3);
       };document.head.appendChild(s2);
     };document.head.appendChild(s1);
@@ -1372,7 +1376,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.9';
+  const _ver='v5.0';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3044,7 +3048,8 @@ function _initSpreadsheet(data,columns){
   for(let r=0;r<rows;r++){const row=[];for(let c=0;c<cols;c++)row.push(data[r]?.[c]??'');padded.push(row);}
   const colDefs=columns&&columns.length?columns:Array.from({length:cols},(_,i)=>({title:String.fromCharCode(65+i),width:100,type:'text'}));
   try{
-    _wsInst=jspreadsheet(el,{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,pagination:100});
+    const sheets=jspreadsheet(el,{worksheets:[{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,pagination:100}]});
+    _wsInst=sheets[0];
   }catch(e){toast('Spreadsheet failed to load: '+e.message,false);console.error('jspreadsheet init error:',e);}
 }
 async function openNewWorksheet(){
