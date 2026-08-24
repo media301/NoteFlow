@@ -753,8 +753,8 @@ mark.hl{background:rgba(245,163,66,.35);color:inherit;border-radius:2px;padding:
         <div id="groupList"><div class="sidebar-empty">No groups — create or join one</div></div>
       </div>
       <div class="sidebar-sec" id="docSection">
-        <div class="sidebar-label">Documents <span style="display:flex;gap:4px"><button class="add-btn" onclick="showNewDoc()" title="New document">+</button><button class="add-btn" onclick="openNewWorksheet()" title="New spreadsheet">📊</button><button class="add-btn" onclick="showNewLink()" title="Link Google Sheet or external URL">🔗</button><label class="add-btn" for="docFileInput" title="Upload CSV or Excel" style="cursor:pointer">↑</label></span></div>
-        <input type="file" id="docFileInput" accept=".csv,.xlsx,.xls" style="display:none">
+        <div class="sidebar-label">Documents <span style="display:flex;gap:4px"><button class="add-btn" onclick="showNewDoc()" title="New document">+</button><button class="add-btn" onclick="openNewWorksheet()" title="New spreadsheet">📊</button><button class="add-btn" onclick="showNewLink()" title="Link Google Sheet or external URL">🔗</button><label class="add-btn" for="docFileInput" title="Upload CSV, Excel, or PDF" style="cursor:pointer">↑</label></span></div>
+        <input type="file" id="docFileInput" accept=".csv,.xlsx,.xls,.pdf,.doc,.docx" style="display:none">
         <div id="docList"><div class="sidebar-empty">No documents yet</div></div>
       </div>
       <div class="sidebar-sec" id="dmSection" style="display:none">
@@ -1400,7 +1400,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v5.3';
+  const _ver='v5.4';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -3074,7 +3074,7 @@ function _initSpreadsheet(data,columns){
   const cols=Math.max((data[0]||[]).length,MINC);
   const padded=[];
   for(let r=0;r<rows;r++){const row=[];for(let c=0;c<cols;c++)row.push(data[r]?.[c]??'');padded.push(row);}
-  const colDefs=columns&&columns.length?columns:Array.from({length:cols},(_,i)=>({title:String.fromCharCode(65+i),width:100,type:'text'}));
+  const colDefs=columns&&columns.length?columns.map(c=>({...c,type:undefined})):Array.from({length:cols},(_,i)=>({title:String.fromCharCode(65+i),width:100}));
   try{
     const sheets=jspreadsheet(el,{worksheets:[{data:padded,columns:colDefs,minDimensions:[cols,rows],allowInsertRow:true,allowInsertColumn:true,allowDeleteRow:true,allowDeleteColumn:true,columnSorting:true,columnResize:true,rowResize:true,search:true,pagination:100}]});
     _wsInst=sheets[0];
@@ -3113,7 +3113,7 @@ async function saveWorksheet(){
   if(!_wsInst){toast('Spreadsheet not ready — wait a moment and try again',false);return;}
   const title=document.getElementById('worksheetTitle').value.trim()||'Spreadsheet';
   let data,colCfg;
-  try{data=_wsInst.getData();colCfg=(_wsInst.getConfig?.()?.columns||[]).map(c=>({title:c.title||'',width:c.width||100,type:'text'}));}
+  try{data=_wsInst.getData();colCfg=(_wsInst.getConfig?.()?.columns||[]).map(c=>({title:c.title||'',width:c.width||100}));}
   catch(e){toast('Could not read spreadsheet data',false);console.error(e);return;}
   const{db,ref,set,update}=window._fb;
   try{
@@ -3173,6 +3173,24 @@ function closeLinkOverlay(){
   document.getElementById('linkOverlay').classList.remove('show');
   setTimeout(()=>{document.getElementById('linkFrame').src='';},300);
 }
+async function openPdfDoc(docId){
+  const d=allDocs[docId]||{};
+  const openBtn=document.getElementById('linkOverlayOpen');
+  document.getElementById('linkOverlayTitle').textContent=d.name||'';
+  openBtn.style.display='none';
+  document.getElementById('linkFrame').src='';
+  document.getElementById('linkOverlay').classList.add('show');
+  if(!window._fb){toast('Not connected',false);return;}
+  const{db,ref,get}=window._fb;
+  try{
+    const snap=await get(ref(db,'docs/'+docId+'/data'));
+    const data=snap.val();
+    if(data&&data.dataUrl){
+      document.getElementById('linkFrame').src=data.dataUrl;
+      openBtn.href=data.dataUrl;openBtn.style.display='';
+    }else{toast('PDF data not found',false);}
+  }catch(err){toast('Could not load PDF: '+(err.message||''),false);}
+}
 // Wire up the sidebar file input for CSV/Excel → Documents
 document.addEventListener('DOMContentLoaded',()=>{
   const inp=document.getElementById('docFileInput');
@@ -3181,6 +3199,22 @@ document.addEventListener('DOMContentLoaded',()=>{
     const f=e.target.files[0];e.target.value='';
     if(!f)return;
     const ext=f.name.split('.').pop().toLowerCase();
+    if(ext==='doc'||ext==='docx'){toast('Word docs: upload to Google Drive and use the 🔗 Link button',false);return;}
+    if(ext==='pdf'){
+      if(f.size>5*1024*1024){toast('PDF too large — keep it under 5 MB',false);return;}
+      if(!window._fb){toast('Not connected',false);return;}
+      toast('Saving PDF…',true);
+      const dataUrl=await fileToBase64(f);
+      const{db,ref,set}=window._fb;
+      const id='doc_'+Date.now().toString(36);
+      const name=f.name.replace(/\.[^.]+$/,'');
+      try{
+        await set(ref(db,'docs/meta/'+id),{name,type:'pdf',createdBy:myName,creatorId:myId,ts:Date.now()});
+        await set(ref(db,'docs/'+id+'/data'),{dataUrl});
+        toast('PDF saved',true);
+      }catch(err){toast('Save failed: '+(err.message||'unknown'),false);}
+      return;
+    }
     toast('Loading spreadsheet…',true);
     await _loadSpreadsheetLibs();
     const reader=new FileReader();
@@ -3548,13 +3582,14 @@ function renderDocList(){
     const isActive=!mobile&&currentView==='doc'&&currentDocId===id;
     const isSheet=d.type==='worksheet';
     const isLink=d.type==='link';
-    const click=mobile
-      ?(isSheet?`openWorksheetDoc('${esc(id)}');showMobileTab('notes')`:isLink?`openLinkDoc('${esc(id)}');document.getElementById('mobileTopicsPanel').classList.remove('show')`:`openDoc('${esc(id)}');showMobileTab('notes')`)
-      :(isSheet?`openWorksheetDoc('${esc(id)}')`:isLink?`openLinkDoc('${esc(id)}')`:`openDoc('${esc(id)}')`);
+    const isPdf=d.type==='pdf';
+    const openFn=isSheet?`openWorksheetDoc('${esc(id)}')`:(isLink?`openLinkDoc('${esc(id)}')`:(isPdf?`openPdfDoc('${esc(id)}')`:`openDoc('${esc(id)}')`));
+    const openFnMobile=isSheet?`openWorksheetDoc('${esc(id)}');showMobileTab('notes')`:(isLink?`openLinkDoc('${esc(id)}');document.getElementById('mobileTopicsPanel').classList.remove('show')`:(isPdf?`openPdfDoc('${esc(id)}');document.getElementById('mobileTopicsPanel').classList.remove('show')`:`openDoc('${esc(id)}');showMobileTab('notes')`));
+    const click=mobile?openFnMobile:openFn;
     const moreClick=`event.stopPropagation();showDocMenu('${esc(id)}')`;
     const groupLabel=d.groupId&&allGroups[d.groupId]?` <span style="font-size:9px;color:var(--dim);background:var(--card2);border-radius:4px;padding:1px 4px">👥${esc(allGroups[d.groupId].name||'')}</span>`:'';
-    const icon=isSheet?'📊':isLink?'🔗':'📄';
-    const iconColor=isSheet?'var(--ac)':isLink?'#007AFF':'var(--amber)';
+    const icon=isSheet?'📊':(isLink?'🔗':(isPdf?'📑':'📄'));
+    const iconColor=isSheet?'var(--ac)':(isLink?'#007AFF':(isPdf?'#FF3B30':'var(--amber)'));
     return `<div class="nav-row${isActive?' active':''}" onclick="${click}" style="padding-right:2px">
       <span class="row-icon" style="color:${iconColor}">${icon}</span>
       <span class="row-label">${esc(d.name)}${groupLabel}</span>
