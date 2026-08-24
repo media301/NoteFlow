@@ -1319,7 +1319,7 @@ function startApp(){
   initPWAIcons();
   initPullToRefresh();
   initFirebase();
-  const _ver='v4.1';
+  const _ver='v4.2';
   ['appVerDesk','appVerMob'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=_ver;});
   const _pdm=sessionStorage.getItem('_pendingDm');
   if(_pdm){sessionStorage.removeItem('_pendingDm');setTimeout(()=>{try{const d=JSON.parse(_pdm);openDm(d.userId,d.name,d.initials,d.color,d.key);showMobileTab('notes');}catch(e){}},800);}
@@ -1458,11 +1458,6 @@ function initFirebase(){
       if(!data.general)set(ref(db,'topics/meta/general'),{title:'General',createdBy:'system',ts:0});
       allTopics=Object.keys(data).length?data:{general:{title:'General',createdBy:'system',ts:0}};
       renderTopicList();
-      // Eagerly fetch all topic entries so Files/Tasks can render synchronously on first tap
-      Object.keys(allTopics).forEach(tid=>{
-        if(allEntries[tid])return;
-        get(ref(db,'topics/'+tid+'/entries')).then(s=>{allEntries[tid]=s.val()||{};});
-      });
     });
     onValue(ref(db,'dms'),snap=>{allDmsData=snap.val()||{};renderDmList(allDmsData);});
     onValue(ref(db,'groups/meta'),snap=>{allGroups=snap.val()||{};renderGroupList();});
@@ -3120,11 +3115,14 @@ function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.va
 // ── MOBILE TABS ───────────────────────────────────────
 function forceIosRepaint(){
   if(!('ontouchstart' in window))return;
-  const feed=document.querySelector('.feed-scroll');
-  if(!feed)return;
-  // Opacity flicker forces iOS WKWebView to create a new compositor frame
-  feed.style.opacity='0.9999';
-  requestAnimationFrame(()=>{feed.style.opacity='';});
+  const pane=document.querySelector('.editor-pane');
+  if(!pane)return;
+  // display:none + forced synchronous reflow fully discards the iOS GPU compositor
+  // texture, guaranteeing the updated DOM is painted. Must be synchronous — rAF
+  // fires outside the tap gesture window and iOS ignores those compositor updates.
+  pane.style.display='none';
+  void pane.offsetHeight;
+  pane.style.display='';
 }
 let mobileTab='notes';
 function showMobileTab(tab){
